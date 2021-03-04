@@ -1,8 +1,9 @@
-import { gql, useQuery, useApolloClient } from '@apollo/client';
+import { gql, useQuery } from '@apollo/client';
 import { makeReducedQueryAst } from './helpers/reducedQueries';
+import apolloClient from './apolloClient';
 
 export default (query, options = {}) => {
-    const { cache } = useApolloClient();
+    const { cache } = apolloClient();
     const queryAst = gql(query);
     // Create a reduced version of the query that contains only the fields that are not in the
     // cache already. Do not do this when polling, because polling implies the need for fresh data.
