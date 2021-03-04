@@ -1,0 +1,46 @@
+{
+  "name": "apollo-augmented-hooks",
+  "version": "1.0.0",
+  "description": "Wrappers for apollo-client's useQuery and useMutation hooks with additional functionality",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "node_modules/@babel/cli/bin/babel.js src --out-dir lib --ignore \"**/*.test.js\",\"**/*.test.jsx\"",
+    "test": "jest"
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env",
+      "@babel/preset-react"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/appmotion/opensource/apollo-augmented-hooks.git"
+  },
+  "author": "Martin Denk",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/appmotion/opensource/apollo-augmented-hooks/issues"
+  },
+  "homepage": "https://gitlab.com/appmotion/opensource/apollo-augmented-hooks#readme",
+  "dependencies": {
+    "@apollo/client": "^3.3.11",
+    "graphql": "^15.5.0",
+    "json-stable-stringify": "^1.0.1",
+    "react": "^17.0.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.13.0",
+    "@babel/core": "^7.13.8",
+    "@babel/preset-env": "^7.13.9",
+    "@babel/preset-react": "^7.12.13",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.21.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^24.1.5",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-react": "^7.22.0",
+    "jest": "^26.6.3"
+  }
+}
