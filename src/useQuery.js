@@ -24,6 +24,7 @@ export default (query, options = {}) => {
     // Grab all the requested data from the cache. If some or all of the data is missing, the
     // reduced query above will get it.
     const cacheResult = useQuery(queryAst, {
+        client,
         variables: options.variables,
         fetchPolicy: 'cache-only',
     });
