@@ -3,13 +3,16 @@ import { makeReducedQueryAst } from './helpers/reducedQueries';
 import apolloClient from './apolloClient';
 
 export default (query, options = {}) => {
-    const { cache } = apolloClient();
+    const client = apolloClient();
     const queryAst = gql(query);
     // Create a reduced version of the query that contains only the fields that are not in the
     // cache already. Do not do this when polling, because polling implies the need for fresh data.
-    const reducedQueryAst = options.pollInterval ? queryAst : makeReducedQueryAst(cache, queryAst);
+    const reducedQueryAst = options.pollInterval
+        ? queryAst
+        : makeReducedQueryAst(client.cache, queryAst);
     const reducedResult = useQuery(reducedQueryAst, {
         ...options,
+        client,
         // Always fetch data from the server on component mount when polling is enabled.
         // Polling indicates that fresh data is more important than caching, so prefer an extra
         // request on mount rather than waiting the poll interval for the first poll request.
