@@ -16,7 +16,7 @@ npm install --save apollo-augmented-hooks
 
 In order to use the hooks, you need to make them aware of your apollo client instance during setup:
 
-```
+```js
 import { ApolloClient } from '@apollo/client';
 import { initAugmentedHooks } from 'apollo-augmented-hooks';
 
@@ -164,6 +164,12 @@ Please make sure to update tests as appropriate.
 
 ```bash
 npm run build
+```
+
+### Test
+
+```bash
+npm test
 ```
 
 ## License
