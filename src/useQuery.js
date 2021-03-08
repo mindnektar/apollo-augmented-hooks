@@ -7,7 +7,9 @@ export default (query, options = {}) => {
     const queryAst = gql(query);
     // Create a reduced version of the query that contains only the fields that are not in the
     // cache already. Do not do this when polling, because polling implies the need for fresh data.
-    const reducedQueryAst = options.pollInterval
+    // Also don't do it if the fetch policy is 'cache-only', because then we don't want to request
+    // anything from the server anyway.
+    const reducedQueryAst = options.pollInterval || options.fetchPolicy === 'cache-only'
         ? queryAst
         : makeReducedQueryAst(client.cache, queryAst);
     const reducedResult = useQuery(reducedQueryAst, {
