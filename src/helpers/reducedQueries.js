@@ -193,7 +193,7 @@ export const makeReducedQueryAst = (cache, queryAst) => {
                     return handleSubSelections(result, selection, cacheContents, cacheObjectOrRef);
                 }
             } else {
-                const hasRef = !!cacheObjectOrRef.__ref;
+                const hasRef = !!cacheObjectOrRef?.__ref;
 
                 if (hasRef && cacheContents[cacheObjectOrRef.__ref]) {
                     return handleSubSelections(result, selection, cacheContents, cacheObjectOrRef);

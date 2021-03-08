@@ -356,6 +356,47 @@ it('keeps fields if no array item in the cache contains useful data to continue 
     compare(reducedQueryAst, actualQuery);
 });
 
+it('keeps fields if it exists in the cache but the value is null', () => {
+    const queryInCache = `
+        query {
+            thing {
+                id
+                name
+                description
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing {
+                id
+                name
+                description
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+                name
+                description
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: null,
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('returns the same query if all the requested data is in the cache', () => {
     const queryInCache = `
         query {
