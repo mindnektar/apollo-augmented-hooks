@@ -1,13 +1,13 @@
 import stringify from 'json-stable-stringify';
 
-const buildFieldName = (selection) => {
+const buildFieldName = (selection, variables) => {
     if (!selection.arguments?.length) {
         return selection.name.value;
     }
 
-    const variables = selection.arguments.reduce((result, { name, value }) => ({
+    const args = selection.arguments.reduce((result, { name }) => ({
         ...result,
-        [name.value]: value.value,
+        [name.value]: variables[name.value],
     }), {});
 
     // The field names in apollo's in-memory-cache are built like this:
@@ -15,27 +15,15 @@ const buildFieldName = (selection) => {
     // someField
     // someField({"someParam":"someValue"})
     //
-    // If there are multiple variables, they are sorted alphabetically, which is why we use
+    // If there are multiple arguments, they are sorted alphabetically, which is why we use
     // json-stable-stringify here (which guarantees alphabetical order).
-    return `${selection.name.value}(${stringify(variables)})`;
+    return `${selection.name.value}(${stringify(args)})`;
 };
 
 // cacheObjectOrRef may contain either the actual cache object or a reference to it. In the latter
 // case, this function returns the actual cache object that is being referenced. If a fieldName is
 // passed, the function will attempt to retrieve a cache object of the same typename where there is
 // useful data for that fieldName, so we are able to dig deeper into the sub selections.
-//
-// Example:
-//
-// {
-//     things: [
-//         { someObject: null },
-//         { someObject: { [...] } }
-//     ]
-// }
-//
-// If 'someObject' is passed as the fieldName, the second element of the things array will be
-// retrieved, because it contains useful data, and we can continue iterating through the tree.
 const getCacheObject = (cacheData, cacheObjectOrRef, fieldName) => {
     const ref = cacheObjectOrRef?.__ref;
 
@@ -74,7 +62,7 @@ const isPresentInCache = (cacheData, cacheObjectOrRef, fieldName) => {
     return cacheObject[fieldName] !== undefined;
 };
 
-const filterSubSelections = (selections, cacheData, cacheObjectOrRef) => {
+const filterSubSelections = (selections, cacheData, cacheObjectOrRef, variables) => {
     // If there is no cache object or reference, there is no data in the cache for this field, so we
     // keep this part of the query.
     if (cacheObjectOrRef === undefined) {
@@ -82,7 +70,7 @@ const filterSubSelections = (selections, cacheData, cacheObjectOrRef) => {
     }
 
     const reducedSelections = selections.reduce((result, selection) => {
-        const fieldName = buildFieldName(selection);
+        const fieldName = buildFieldName(selection, variables);
 
         // The current field is not a leaf in the tree, so we may need to go deeper.
         if (selection.selectionSet) {
@@ -116,6 +104,7 @@ const filterSubSelections = (selections, cacheData, cacheObjectOrRef) => {
                 selection,
                 cacheData,
                 cacheObject[fieldName],
+                variables,
             );
         }
 
@@ -148,11 +137,12 @@ const filterSubSelections = (selections, cacheData, cacheObjectOrRef) => {
     return reducedSelections;
 };
 
-const handleSubSelections = (result, selection, cacheData, cacheObjectOrRef) => {
+const handleSubSelections = (result, selection, cacheData, cacheObjectOrRef, variables) => {
     const subSelections = filterSubSelections(
         selection.selectionSet.selections,
         cacheData,
         cacheObjectOrRef,
+        variables,
     );
 
     if (subSelections.length === 0) {
@@ -171,14 +161,14 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectOrRef) => 
     ];
 };
 
-export const makeReducedQueryAst = (cache, queryAst) => {
+export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const cacheContents = cache.extract();
 
     // Recursively iterate through the entire graphql query tree, removing the fields for which we
     // already have data in the cache.
     const selections = (
         queryAst.definitions[0].selectionSet.selections.reduce((result, selection) => {
-            const fieldName = buildFieldName(selection);
+            const fieldName = buildFieldName(selection, variables);
             const cacheObjectOrRef = cacheContents.ROOT_QUERY?.[fieldName];
 
             if (cacheObjectOrRef === undefined) {
@@ -186,21 +176,13 @@ export const makeReducedQueryAst = (cache, queryAst) => {
                 return [...result, selection];
             }
 
-            if (Array.isArray(cacheObjectOrRef)) {
-                const hasRefs = !!cacheObjectOrRef[0]?.__ref;
-
-                if (hasRefs && cacheObjectOrRef.every(({ __ref }) => cacheContents[__ref])) {
-                    return handleSubSelections(result, selection, cacheContents, cacheObjectOrRef);
-                }
-            } else {
-                const hasRef = !!cacheObjectOrRef?.__ref;
-
-                if (hasRef && cacheContents[cacheObjectOrRef.__ref]) {
-                    return handleSubSelections(result, selection, cacheContents, cacheObjectOrRef);
-                }
-            }
-
-            return [...result, selection];
+            return handleSubSelections(
+                result,
+                selection,
+                cacheContents,
+                cacheObjectOrRef,
+                variables
+            );
         }, [])
     );
     // Construct a new tree from the reduced selection set.

@@ -11,7 +11,7 @@ export default (query, options = {}) => {
     // anything from the server anyway.
     const reducedQueryAst = options.pollInterval || options.fetchPolicy === 'cache-only'
         ? queryAst
-        : makeReducedQueryAst(client.cache, queryAst);
+        : makeReducedQueryAst(client.cache, queryAst, options.variables);
     const reducedResult = useQuery(reducedQueryAst, {
         ...options,
         client,

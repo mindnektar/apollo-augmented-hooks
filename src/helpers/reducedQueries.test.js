@@ -376,7 +376,7 @@ it('keeps fields if it exists in the cache but the value is null', () => {
         }
     `;
     const actualQuery = `
-        query __REDUCED__ {
+        {
             thing {
                 id
                 name
@@ -393,6 +393,106 @@ it('keeps fields if it exists in the cache but the value is null', () => {
     });
 
     const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('removes fields if the same variables are used', () => {
+    const queryInCache = `
+        query test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                name
+                description
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                description
+            }
+        }
+    `;
+    const variables = {
+        filter: {
+            someFilter: 'some-value',
+        },
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+        variables,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), variables);
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('keeps fields if different variables are used', () => {
+    const queryInCache = `
+        query test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                name
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                name
+            }
+        }
+    `;
+    const variablesInCache = {
+        filter: {
+            someFilter: 'some-value',
+        },
+    };
+    const requestedVariables = {
+        filter: {
+            someFilter: 'some-other-value',
+        },
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+        variables: variablesInCache,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), requestedVariables);
 
     compare(reducedQueryAst, actualQuery);
 });
@@ -424,4 +524,149 @@ it('returns the same query if all the requested data is in the cache', () => {
     const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
 
     expect(reducedQueryAst).toEqual(gql(requestedQuery));
+});
+
+it('has the expected result in a complex query', () => {
+    const queryInCache = `
+        query test($a: A, $b: B, $c: C) {
+            inCache {
+                id
+                name
+                inCacheSub {
+                    id
+                    name
+                }
+                inCacheSubWithVars(a: $a) {
+                    id
+                    name
+                }
+            }
+            inCacheWithVars(b: $b) {
+                id
+                name
+                inCacheWithVarsSub {
+                    id
+                    name
+                }
+                inCacheWithVarsSubWithVars(c: $c) {
+                    id
+                    name
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query test($a: A, $b: B, $c: C) {
+            inCache {
+                id
+                name
+                inCacheSub {
+                    id
+                    name
+                }
+                inCacheSubWithVars(a: $a) {
+                    id
+                    name
+                    inCacheSubWithVarsSubNotInCache {
+                        id
+                        name
+                    }
+                }
+                inCacheSubNotInCache {
+                    id
+                    name
+                }
+            }
+            inCacheWithVars(b: $b) {
+                id
+                name
+                inCacheWithVarsSub {
+                    id
+                    name
+                }
+                inCacheWithVarsSubWithVars(c: $c) {
+                    id
+                    name
+                }
+            }
+            notInCache {
+                id
+                name
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__test($a: A, $b: B, $c: C) {
+            inCache {
+                id
+                inCacheSubWithVars(a: $a) {
+                    id
+                    inCacheSubWithVarsSubNotInCache {
+                        id
+                        name
+                    }
+                }
+                inCacheSubNotInCache {
+                    id
+                    name
+                }
+            }
+            inCacheWithVars(b: $b) {
+                id
+                inCacheWithVarsSubWithVars(c: $c) {
+                    id
+                    name
+                }
+            }
+            notInCache {
+                id
+                name
+            }
+        }
+    `;
+    const variablesInCache = {
+        a: 'a',
+        b: 'b',
+        c: 'c',
+    };
+    const requestedVariables = {
+        a: 'a',
+        b: 'b',
+        c: 'c-altered',
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            inCache: {
+                id: 'some-id',
+                name: 'some-name',
+                inCacheSub: [{
+                    id: 'some-id-2',
+                    name: 'some-name-2',
+                }],
+                inCacheSubWithVars: {
+                    id: 'some-id-3',
+                    name: 'some-name-3',
+                },
+            },
+            inCacheWithVars: [{
+                id: 'some-id-4',
+                name: 'some-name-4',
+                inCacheWithVarsSub: {
+                    id: 'some-id-5',
+                    name: 'some-name-5',
+                },
+                inCacheWithVarsSubWithVars: [{
+                    id: 'some-id-6',
+                    name: 'some-name-6',
+                }],
+            }],
+        },
+        variables: variablesInCache,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), requestedVariables);
+
+    compare(reducedQueryAst, actualQuery);
 });

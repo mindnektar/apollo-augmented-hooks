@@ -20,18 +20,6 @@ const handleIncludeIf = (cache, item, previous, details) => (
     }
 );
 
-const getCacheId = (cache, cacheObject, item) => {
-    if (cacheObject) {
-        if (typeof cacheObject === 'function') {
-            return cache.identify(cacheObject(item));
-        }
-
-        return cache.identify(cacheObject);
-    }
-
-    return 'ROOT_QUERY';
-};
-
 const augmentFields = (cache, item, fields) => {
     const modify = (callback, previous, details) => (
         // Attach a couple additional helpers to apollo's standard details object.
@@ -59,32 +47,50 @@ const augmentFields = (cache, item, fields) => {
     }), {});
 };
 
+const getCacheIds = (cache, item, cacheObject, typename) => {
+    if (!cacheObject && !typename) {
+        return ['ROOT_QUERY'];
+    }
+
+    if (cacheObject) {
+        if (typeof cacheObject === 'function') {
+            return [cache.identify(cacheObject(item))];
+        }
+
+        return [cache.identify(cacheObject)];
+    }
+
+    return Object.keys(cache.extract()).filter((key) => key.startsWith(`${typename}:`));
+};
+
 export const handleModifiers = (cache, item, modifiers) => {
     if (!modifiers) {
         return;
     }
 
-    modifiers.forEach(({ cacheObject, fields, evict }) => {
-        const cacheId = getCacheId(cache, cacheObject, item);
+    modifiers.forEach(({ cacheObject, typename, fields, evict }) => {
+        const cacheIds = getCacheIds(cache, item, cacheObject, typename);
 
-        if (evict) {
-            // Remove the specified cache object from the cache along with all references to it
-            // on any other cache objects.
-            cache.evict({ id: cacheId });
-            cache.gc();
-            return;
-        }
+        cacheIds.forEach((cacheId) => {
+            if (evict) {
+                // Remove the specified cache object from the cache along with all references to it
+                // on any other cache objects.
+                cache.evict({ id: cacheId });
+                cache.gc();
+                return;
+            }
 
-        try {
-            cache.modify({
-                id: cacheId,
-                fields: augmentFields(cache, item, fields),
-            });
-        } catch (error) {
-            // Cache errors are swallowed, so specifically output them to the console.
-            /* eslint-disable-next-line no-console */
-            console.error(error);
-            throw error;
-        }
+            try {
+                cache.modify({
+                    id: cacheId,
+                    fields: augmentFields(cache, item, fields),
+                });
+            } catch (error) {
+                // Cache errors are swallowed, so specifically output them to the console.
+                /* eslint-disable-next-line no-console */
+                console.error(error);
+                throw error;
+            }
+        });
     });
 };
