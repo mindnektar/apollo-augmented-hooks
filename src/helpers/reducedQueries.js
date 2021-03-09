@@ -162,6 +162,13 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectOrRef, var
     ];
 };
 
+const hasVariable = (selectionSet, variable) => (
+    (selectionSet?.selections || []).some((selection) => (
+        selection.arguments.some(({ value }) => value.name.value === variable)
+        || hasVariable(selection.selectionSet, variable)
+    ))
+);
+
 export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const cacheContents = cache.extract();
 
@@ -187,19 +194,26 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
         }, [])
     );
     // Construct a new tree from the reduced selection set.
+    const definition = queryAst.definitions[0];
+    const selectionSet = {
+        ...definition.selectionSet,
+        selections,
+    };
     const reducedQueryAst = {
         ...queryAst,
         definitions: [{
-            ...queryAst.definitions[0],
+            ...definition,
             name: {
                 kind: 'Name',
                 // Prefix the query name with something that clearly marks it as manipulated.
-                value: `__REDUCED__${queryAst.definitions[0].name?.value || ''}`,
+                value: `__REDUCED__${definition.name?.value || ''}`,
             },
-            selectionSet: {
-                ...queryAst.definitions[0].selectionSet,
-                selections,
-            },
+            selectionSet,
+            // Remove variable definitions that are no longer referenced anywhere in the selection
+            // set.
+            variableDefinitions: definition.variableDefinitions.filter(({ variable }) => (
+                hasVariable(selectionSet, variable.name.value)
+            )),
         }],
     };
 

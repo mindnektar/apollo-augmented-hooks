@@ -539,6 +539,55 @@ it('removes fields if the same inline variables are used', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('removes the variable definition if it is no longer used', () => {
+    const queryInCache = `
+        query test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query test($filter: Filter) {
+            things(filter: $filter) {
+                id
+                name
+            }
+            thing {
+                id
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__test {
+            thing {
+                id
+            }
+        }
+    `;
+    const variables = {
+        filter: {
+            someFilter: 'some-value',
+        },
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+        variables,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), variables);
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('returns the same query if all the requested data is in the cache', () => {
     const queryInCache = `
         query {
@@ -568,7 +617,7 @@ it('returns the same query if all the requested data is in the cache', () => {
     expect(reducedQueryAst).toEqual(gql(requestedQuery));
 });
 
-it('has the expected result in a complex query', () => {
+it.only('has the expected result in a complex query', () => {
     const queryInCache = `
         query test($a: A, $b: B, $c: C) {
             inCache {
