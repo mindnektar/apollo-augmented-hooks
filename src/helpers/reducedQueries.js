@@ -34,11 +34,11 @@ const getCacheObject = (cacheData, cacheObjectOrRef, fieldName) => {
                 return cacheData[ref];
             }
 
-            const typeName = ref.match(/^(.*):/)[1];
+            const typename = ref.match(/^(.*):/)[1];
 
             return (
                 Object.values(cacheData).find((value) => (
-                    value.__typeName === typeName
+                    value.__typename === typename
                     && value[fieldName] !== null
                     && value[fieldName] !== undefined
                 ))
