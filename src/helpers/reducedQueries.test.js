@@ -554,14 +554,14 @@ it('removes the variable definition if it is no longer used', () => {
                 id
                 name
             }
-            thing {
+            thing(filter: "some-inline-value") {
                 id
             }
         }
     `;
     const actualQuery = `
         query __REDUCED__test {
-            thing {
+            thing(filter: "some-inline-value") {
                 id
             }
         }
@@ -617,7 +617,7 @@ it('returns the same query if all the requested data is in the cache', () => {
     expect(reducedQueryAst).toEqual(gql(requestedQuery));
 });
 
-it.only('has the expected result in a complex query', () => {
+it('has the expected result in a complex query', () => {
     const queryInCache = `
         query test($a: A, $b: B, $c: C) {
             inCache {

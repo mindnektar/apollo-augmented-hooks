@@ -164,7 +164,7 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectOrRef, var
 
 const hasVariable = (selectionSet, variable) => (
     (selectionSet?.selections || []).some((selection) => (
-        selection.arguments.some(({ value }) => value.name.value === variable)
+        selection.arguments.some(({ value }) => value?.name?.value === variable)
         || hasVariable(selection.selectionSet, variable)
     ))
 );

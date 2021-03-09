@@ -1,6 +1,6 @@
 {
   "name": "apollo-augmented-hooks",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Wrappers for apollo-client's useQuery and useMutation hooks with additional functionality",
   "main": "lib/index.js",
   "scripts": {
