@@ -497,6 +497,48 @@ it('keeps fields if different variables are used', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('removes fields if the same inline variables are used', () => {
+    const queryInCache = `
+        query {
+            things(filter: "some-value") {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            things(filter: "some-value") {
+                id
+                name
+                description
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            things(filter: "some-value") {
+                id
+                description
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('returns the same query if all the requested data is in the cache', () => {
     const queryInCache = `
         query {

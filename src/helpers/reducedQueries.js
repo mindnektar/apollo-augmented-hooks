@@ -5,9 +5,10 @@ const buildFieldName = (selection, variables) => {
         return selection.name.value;
     }
 
-    const args = selection.arguments.reduce((result, { name }) => ({
+    const args = selection.arguments.reduce((result, { name, value }) => ({
         ...result,
-        [name.value]: variables[name.value],
+        // Handle both inline and external veriables
+        [name.value]: value.value || variables?.[name.value],
     }), {});
 
     // The field names in apollo's in-memory-cache are built like this:
