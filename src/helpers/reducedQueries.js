@@ -38,7 +38,9 @@ const getCacheObject = (cacheData, cacheObjectOrRef, fieldName) => {
 
             return (
                 Object.values(cacheData).find((value) => (
-                    value.__typeName === typeName && value[fieldName] !== null
+                    value.__typeName === typeName
+                    && value[fieldName] !== null
+                    && value[fieldName] !== undefined
                 ))
             ) || cacheData[ref];
         }
@@ -85,7 +87,10 @@ const filterSubSelections = (selections, cacheData, cacheObjectOrRef, variables)
                         return itemCacheObject[fieldName].length > 0;
                     }
 
-                    return itemCacheObject[fieldName] !== null;
+                    return (
+                        itemCacheObject[fieldName] !== null
+                        && itemCacheObject[fieldName] !== undefined
+                    );
                 });
 
                 cacheObject = getCacheObject(cacheData, cacheObjectOrRef[index]);

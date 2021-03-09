@@ -280,7 +280,7 @@ it('removes fields arbitrarily deep when using arrays', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
-it('keeps fields if no array item in the cache contains useful data to continue traversing', () => {
+it('keeps fields if no item in the cache with the same typename contains useful data to continue traversing', () => {
     const queryInCache = `
         query {
             thing {
@@ -346,6 +346,85 @@ it('keeps fields if no array item in the cache contains useful data to continue 
                     __typename: 'Thing',
                     id: 'some-id-3',
                     thing: null,
+                }],
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('removes fields if there are other items in the cache with the same typename that contain useful data to continue traversing', () => {
+    const queryInCache = `
+        query {
+            thing {
+                id
+                things {
+                    id
+                    thing {
+                        id
+                        name
+                        thing {
+                            id
+                        }
+                    }
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing {
+                id
+                things {
+                    id
+                    name
+                    thing {
+                        id
+                        name
+                        thing {
+                            id
+                        }
+                    }
+                }
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+                things {
+                    id
+                    name
+                }
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+                things: [{
+                    __typename: 'Thing',
+                    id: 'some-id-2',
+                }, {
+                    __typename: 'Thing',
+                    id: 'some-id-3',
+                    thing: {
+                        __typename: 'Thing',
+                        id: 'some-id-4',
+                        name: 'some-name-4',
+                        thing: {
+                            __typename: 'Thing',
+                            id: 'some-id-5',
+                        },
+                    },
                 }],
             },
         },
@@ -433,6 +512,7 @@ it('removes fields if the same variables are used', () => {
         query: gql(queryInCache),
         data: {
             things: [{
+                __typename: 'Thing',
                 id: 'some-id',
                 name: 'some-name',
             }],
@@ -485,6 +565,7 @@ it('keeps fields if different variables are used', () => {
         query: gql(queryInCache),
         data: {
             things: [{
+                __typename: 'Thing',
                 id: 'some-id',
                 name: 'some-name',
             }],
@@ -528,6 +609,7 @@ it('removes fields if the same inline variables are used', () => {
         query: gql(queryInCache),
         data: {
             things: [{
+                __typename: 'Thing',
                 id: 'some-id',
                 name: 'some-name',
             }],
@@ -576,6 +658,7 @@ it('removes the variable definition if it is no longer used', () => {
         query: gql(queryInCache),
         data: {
             things: [{
+                __typename: 'Thing',
                 id: 'some-id',
                 name: 'some-name',
             }],
@@ -584,6 +667,84 @@ it('removes the variable definition if it is no longer used', () => {
     });
 
     const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), variables);
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('removes fields if they are in the cache but have no id', () => {
+    const queryInCache = `
+        query {
+            things {
+                id
+                name
+                subThing {
+                    name
+                }
+            }
+            otherThings {
+                name
+                subThing {
+                    id
+                    name
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            things {
+                id
+                name
+                subThing {
+                    name
+                }
+            }
+            otherThings {
+                name
+                subThing {
+                    id
+                    name
+                    description
+                }
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            otherThings {
+                subThing {
+                    id
+                    description
+                }
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                __typename: 'Thing',
+                id: 'some-id',
+                name: 'some-name',
+                subThing: {
+                    __typename: 'Thing',
+                    name: 'some-name-2',
+                },
+            }],
+            otherThings: [{
+                __typename: 'Thing',
+                name: 'some-name-3',
+                subThing: {
+                    __typename: 'Thing',
+                    id: 'some-id-4',
+                    name: 'some-name-4',
+                },
+            }],
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
 
     compare(reducedQueryAst, actualQuery);
 });
@@ -730,25 +891,31 @@ it('has the expected result in a complex query', () => {
         query: gql(queryInCache),
         data: {
             inCache: {
+                __typename: 'Thing',
                 id: 'some-id',
                 name: 'some-name',
                 inCacheSub: [{
+                    __typename: 'Thing',
                     id: 'some-id-2',
                     name: 'some-name-2',
                 }],
                 inCacheSubWithVars: {
+                    __typename: 'Thing',
                     id: 'some-id-3',
                     name: 'some-name-3',
                 },
             },
             inCacheWithVars: [{
+                __typename: 'Thing',
                 id: 'some-id-4',
                 name: 'some-name-4',
                 inCacheWithVarsSub: {
+                    __typename: 'Thing',
                     id: 'some-id-5',
                     name: 'some-name-5',
                 },
                 inCacheWithVarsSubWithVars: [{
+                    __typename: 'Thing',
                     id: 'some-id-6',
                     name: 'some-name-6',
                 }],
