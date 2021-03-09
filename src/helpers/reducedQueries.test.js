@@ -583,7 +583,7 @@ it('has the expected result in a complex query', () => {
                     name
                 }
             }
-            inCacheWithVars(b: $b) {
+            inCacheWithVars(bDifferentName: $b) {
                 id
                 name
                 inCacheWithVarsSub {
@@ -619,7 +619,7 @@ it('has the expected result in a complex query', () => {
                     name
                 }
             }
-            inCacheWithVars(b: $b) {
+            inCacheWithVars(bDifferentName: $b) {
                 id
                 name
                 inCacheWithVarsSub {
@@ -653,7 +653,7 @@ it('has the expected result in a complex query', () => {
                     name
                 }
             }
-            inCacheWithVars(b: $b) {
+            inCacheWithVars(bDifferentName: $b) {
                 id
                 inCacheWithVarsSubWithVars(c: $c) {
                     id
