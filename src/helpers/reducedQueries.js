@@ -57,8 +57,9 @@ const isPresentInCache = (cacheData, cacheObjectOrRef, fieldName) => {
     const cacheObject = getCacheObject(cacheData, cacheObjectOrRef);
 
     // Null means that the cache object exists but contains no data (unlike undefined, which would
-    // mean the cache object is missing).
-    if (cacheObject === null) {
+    // mean the cache object is missing). Undefined might mean that the cache object has been
+    // evicted previously.
+    if (cacheObject === null || cacheObject === undefined) {
         return true;
     }
 

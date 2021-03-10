@@ -778,6 +778,37 @@ it('returns the same query if all the requested data is in the cache', () => {
     expect(reducedQueryAst).toEqual(gql(requestedQuery));
 });
 
+it('keeps fields if the data has been evicted from the cache', () => {
+    const queryInCache = `
+        query {
+            thing {
+                id
+                name
+                description
+            }
+        }
+    `;
+    const requestedQuery = queryInCache;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+                name: 'some-name',
+                description: 'some-description',
+            },
+        },
+    });
+
+    cache.evict({ id: 'Thing:some-id' });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    expect(reducedQueryAst).toEqual(gql(requestedQuery));
+});
+
 it('has the expected result in a complex query', () => {
     const queryInCache = `
         query test($a: A, $b: B, $c: C) {
