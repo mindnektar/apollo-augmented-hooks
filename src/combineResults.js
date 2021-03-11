@@ -22,7 +22,7 @@ export default (...results) => ({
     ...results[0],
     loading: results.some(({ loading }) => loading),
     data: merge.all(
-        results.map(({ data }) => data),
+        results.map(({ data }) => data || {}),
         // Assume that array items across the results with the same index are supposed to be merged
         // rather than concatenated. Otherwise you might end up with duplicated items if two queries
         // request the same array resource.
@@ -31,6 +31,6 @@ export default (...results) => ({
     error: merge.all(
         // Here we stick to deepmerge's default behaviour of concatenating arrays so we don't lose
         // any error messages if more than one of the combined queries happen to throw an error.
-        results.map(({ error }) => error)
+        results.map(({ error }) => error || {})
     ),
 });
