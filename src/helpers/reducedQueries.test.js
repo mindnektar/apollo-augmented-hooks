@@ -413,6 +413,7 @@ it('removes fields if there are other items in the cache with the same typename 
                 things: [{
                     __typename: 'Thing',
                     id: 'some-id-2',
+                    thing: null,
                 }, {
                     __typename: 'Thing',
                     id: 'some-id-3',
@@ -426,6 +427,122 @@ it('removes fields if there are other items in the cache with the same typename 
                         },
                     },
                 }],
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('keeps fields if there are other items in the cache with the same typename that contain useful data to continue traversing but they are not part of the array', () => {
+    const queryInCache = `
+        query {
+            things {
+                id
+                foo {
+                    id
+                    bar {
+                        id
+                        name
+                    }
+                    bar2 {
+                        id
+                        name
+                    }
+                }
+            }
+            foo {
+                id
+                bar {
+                    id
+                    name
+                }
+                bar2 {
+                    id
+                    name
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            things {
+                id
+                foo {
+                    id
+                    bar2 {
+                        id
+                        name
+                    }
+                }
+            }
+            boop {
+                id
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            things {
+                id
+                foo {
+                    id
+                    bar2 {
+                        id
+                        name
+                    }
+                }
+            }
+            boop {
+                id
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                __typename: 'Thing',
+                id: 'some-id',
+                foo: {
+                    __typename: 'Foo',
+                    id: 'some-id-2',
+                    bar: {
+                        __typename: 'Bar',
+                        id: 'some-id-3',
+                        name: 'some-name-3',
+                    },
+                    bar2: null,
+                },
+            }, {
+                __typename: 'Thing',
+                id: 'some-id-4',
+                foo: {
+                    __typename: 'Foo',
+                    id: 'some-id-5',
+                    bar: {
+                        __typename: 'Bar',
+                        id: 'some-id-6',
+                        name: 'some-name-6',
+                    },
+                },
+            }],
+            foo: {
+                __typename: 'Foo',
+                id: 'some-id-7',
+                bar: {
+                    __typename: 'Bar',
+                    id: 'some-id-7',
+                    name: 'some-name-7',
+                },
+                bar2: {
+                    __typename: 'Bar',
+                    id: 'some-id-8',
+                    name: 'some-name-8',
+                },
             },
         },
     });
@@ -784,11 +901,38 @@ it('keeps fields if the data has been evicted from the cache', () => {
             thing {
                 id
                 name
-                description
+                thing {
+                    id
+                    name
+                }
             }
         }
     `;
-    const requestedQuery = queryInCache;
+    const requestedQuery = `
+        query {
+            thing {
+                id
+                name
+                description
+                thing {
+                    id
+                    name
+                }
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+                description
+                thing {
+                    id
+                    name
+                }
+            }
+        }
+    `;
 
     cache.writeQuery({
         query: gql(queryInCache),
@@ -797,16 +941,20 @@ it('keeps fields if the data has been evicted from the cache', () => {
                 __typename: 'Thing',
                 id: 'some-id',
                 name: 'some-name',
-                description: 'some-description',
+                thing: {
+                    __typename: 'Thing',
+                    id: 'some-id-2',
+                    name: 'some-name-2',
+                },
             },
         },
     });
 
-    cache.evict({ id: 'Thing:some-id' });
+    cache.evict({ id: 'Thing:some-id-2' });
 
     const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
 
-    expect(reducedQueryAst).toEqual(gql(requestedQuery));
+    compare(reducedQueryAst, actualQuery);
 });
 
 it('has the expected result in a complex query', () => {

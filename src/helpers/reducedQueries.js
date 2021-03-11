@@ -22,32 +22,12 @@ const buildFieldName = (selection, variables) => {
 };
 
 // cacheObjectOrRef may contain either the actual cache object or a reference to it. In the latter
-// case, this function returns the actual cache object that is being referenced. If a fieldName is
-// passed, the function will attempt to retrieve a cache object of the same typename where there is
-// useful data for that fieldName, so we are able to dig deeper into the sub selections.
-const getCacheObject = (cacheData, cacheObjectOrRef, fieldName) => {
+// case, this function returns the actual cache object that is being referenced.
+const getCacheObject = (cacheData, cacheObjectOrRef) => {
     const ref = cacheObjectOrRef?.__ref;
 
-    if (ref) {
-        if (fieldName) {
-            if (cacheData[ref]?.[fieldName] !== null) {
-                return cacheData[ref];
-            }
-
-            const typename = ref.match(/^(.*):/)[1];
-
-            return (
-                Object.values(cacheData).find((value) => (
-                    value.__typename === typename
-                    && value[fieldName] !== null
-                    && value[fieldName] !== undefined
-                ))
-            ) || cacheData[ref];
-        }
-
-        if (cacheData[ref] !== null) {
-            return cacheData[ref];
-        }
+    if (ref && cacheData[ref] !== null) {
+        return cacheData[ref];
     }
 
     return cacheObjectOrRef;
@@ -57,79 +37,81 @@ const isPresentInCache = (cacheData, cacheObjectOrRef, fieldName) => {
     const cacheObject = getCacheObject(cacheData, cacheObjectOrRef);
 
     // Null means that the cache object exists but contains no data (unlike undefined, which would
-    // mean the cache object is missing). Undefined might mean that the cache object has been
-    // evicted previously.
-    if (cacheObject === null || cacheObject === undefined) {
+    // mean the cache object is missing).
+    if (cacheObject === null) {
         return true;
+    }
+
+    // The cache object may have been evicted from the cache. So any of its children aren't in the
+    // cache either.
+    if (cacheObject === undefined) {
+        return false;
     }
 
     return cacheObject[fieldName] !== undefined;
 };
 
-const filterSubSelections = (selections, cacheData, cacheObjectOrRef, variables) => {
+const findNextCacheObjectsOrRefs = (cacheData, cacheObjectsOrRefs, fieldName) => (
+    cacheObjectsOrRefs.reduce((result, item) => {
+        const itemCacheObject = getCacheObject(cacheData, item);
+        let fieldData = itemCacheObject[fieldName];
+
+        if (fieldData === null) {
+            return result;
+        }
+
+        if (!Array.isArray(itemCacheObject[fieldName])) {
+            fieldData = [fieldData];
+        }
+
+        return [...result, ...fieldData];
+    }, [])
+);
+
+const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variables) => {
     // If there is no cache object or reference, there is no data in the cache for this field, so we
     // keep this part of the query.
-    if (cacheObjectOrRef === undefined) {
+    if (cacheObjectsOrRefs === undefined) {
         return selections;
     }
 
     const reducedSelections = selections.reduce((result, selection) => {
         const fieldName = buildFieldName(selection, variables);
 
+        if (
+            // Always keep the id field, otherwise apollo can't merge the cache items after the
+            // request is done.
+            fieldName === 'id'
+            // Keep the entire selection if at least one of its items is not in the cache (it may
+            // have been evicted at some point).
+            || !cacheObjectsOrRefs.every((item) => isPresentInCache(cacheData, item, fieldName))
+        ) {
+            return [...result, selection];
+        }
+
         // The current field is not a leaf in the tree, so we may need to go deeper.
         if (selection.selectionSet) {
-            let cacheObject;
-
-            if (Array.isArray(cacheObjectOrRef)) {
-                const index = cacheObjectOrRef.findIndex((item) => {
-                    const itemCacheObject = getCacheObject(cacheData, item);
-
-                    if (Array.isArray(itemCacheObject[fieldName])) {
-                        return itemCacheObject[fieldName].length > 0;
-                    }
-
-                    return (
-                        itemCacheObject[fieldName] !== null
-                        && itemCacheObject[fieldName] !== undefined
-                    );
-                });
-
-                cacheObject = getCacheObject(cacheData, cacheObjectOrRef[index]);
-            } else {
-                cacheObject = getCacheObject(cacheData, cacheObjectOrRef, fieldName);
-            }
+            // Gather all cache objects or refs of the next level in the tree. Ignore any null
+            // values. By not only using a single object as a reference but rather as many like
+            // objects as possible, we increase our chances of finding a useful reference for any
+            // deeper-level fields.
+            const nextCacheObjectsOrRefs = findNextCacheObjectsOrRefs(
+                cacheData, cacheObjectsOrRefs, fieldName
+            );
 
             // If we can't find any data for this field in the cache at all, we'll keep the entire
             // selection. This may also be the case if we have already requested this field before,
             // but it has returned null data or empty arrays for every single item.
-            if (cacheObject === null || cacheObject === undefined) {
+            if (nextCacheObjectsOrRefs.length === 0) {
                 return [...result, selection];
             }
 
             return handleSubSelections(
-                result,
-                selection,
-                cacheData,
-                cacheObject[fieldName],
-                variables,
+                result, selection, cacheData, nextCacheObjectsOrRefs, variables,
             );
         }
 
-        // Always keep the id field, otherwise apollo can't merge the cache items after the
-        // request is done.
-        if (fieldName === 'id') {
-            return [...result, selection];
-        }
-
-        if (Array.isArray(cacheObjectOrRef)) {
-            return cacheObjectOrRef.every((item) => isPresentInCache(cacheData, item, fieldName))
-                ? result
-                : [...result, selection];
-        }
-
-        return isPresentInCache(cacheData, cacheObjectOrRef, fieldName)
-            ? result
-            : [...result, selection];
+        return result;
     }, []);
 
     // If the reduced selection set is empty or only contains the mandatory id, the cache already
@@ -144,11 +126,11 @@ const filterSubSelections = (selections, cacheData, cacheObjectOrRef, variables)
     return reducedSelections;
 };
 
-const handleSubSelections = (result, selection, cacheData, cacheObjectOrRef, variables) => {
+const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, variables) => {
     const subSelections = filterSubSelections(
         selection.selectionSet.selections,
         cacheData,
-        cacheObjectOrRef,
+        cacheObjectsOrRefs,
         variables,
     );
 
@@ -183,18 +165,22 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const selections = (
         queryAst.definitions[0].selectionSet.selections.reduce((result, selection) => {
             const fieldName = buildFieldName(selection, variables);
-            const cacheObjectOrRef = cacheContents.ROOT_QUERY?.[fieldName];
+            let cacheObjectsOrRefs = cacheContents.ROOT_QUERY?.[fieldName];
 
-            if (cacheObjectOrRef === undefined) {
+            if (cacheObjectsOrRefs === undefined) {
                 // If the field cannot be found in the cache, keep the entire selection.
                 return [...result, selection];
+            }
+
+            if (!Array.isArray(cacheObjectsOrRefs)) {
+                cacheObjectsOrRefs = [cacheObjectsOrRefs];
             }
 
             return handleSubSelections(
                 result,
                 selection,
                 cacheContents,
-                cacheObjectOrRef,
+                cacheObjectsOrRefs,
                 variables
             );
         }, [])
