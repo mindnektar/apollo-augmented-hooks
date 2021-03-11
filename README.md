@@ -76,7 +76,11 @@ query {
 
 This works arbitrarily deep and out of the box without any extra configuration. Depending on how often the same data is requested across your app's queries, this can severely reduce the server load and increase response time.
 
-`useQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterpart.
+`useQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterpart. Additionally, it supports the following new options:
+
+#### reducedQuery
+
+Default: `true`. Set to `false` if you wish to disable the above query reduction functionality.
 
 ### useMutation
 
@@ -108,9 +112,9 @@ mutate({
 });
 ```
 
-#### expectedResponse
+#### optimisticResponse
 
-`expectedResponse` can be used in place of the `optimisticResponse` option. It automatically adds the attributes from the `input` object as well as the `__typename: 'Mutation'` part, reducing overhead.
+`optimisticResponse` is already available in the original `useMutation`, but it now provides a way to reduce some overhead. It automatically adds the attributes from the `input` object as well as the `__typename: 'Mutation'` part.
 
 Example:
 
@@ -144,7 +148,7 @@ const input = {
 
 mutate({
     input,
-    expectedResponse: {
+    optimisticResponse: {
         __typename: 'Thing',
         someKeyNotInTheInput: 'foo'
     }
