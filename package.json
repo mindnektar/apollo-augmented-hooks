@@ -1,6 +1,6 @@
 {
   "name": "apollo-augmented-hooks",
-  "version": "1.1.9",
+  "version": "1.2.0",
   "description": "Wrappers for apollo-client's useQuery and useMutation hooks with additional functionality",
   "main": "lib/index.js",
   "scripts": {
@@ -25,6 +25,7 @@
   "homepage": "https://gitlab.com/appmotion/opensource/apollo-augmented-hooks#readme",
   "dependencies": {
     "@apollo/client": "^3.3.11",
+    "deepmerge": "^4.2.2",
     "graphql": "^15.5.0",
     "json-stable-stringify": "^1.0.1",
     "react": "^17.0.1"
