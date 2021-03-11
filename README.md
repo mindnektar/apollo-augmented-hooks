@@ -157,7 +157,85 @@ mutate({
 
 #### modifiers
 
-WIP
+`modifiers` serves as a helper to make cache updates after a mutation as pain-free as possible. It accepts an array of modifier objects with the following properties:
+
+##### cacheObject
+
+The object that you wish to update in the cache. If you have an object with a `__typename` and an `id` property, you can pass it here, and the modifier will use apollo's `cache.identify` on it so you don't have to. Alternatively you can pass a function returning your cache object. If you do so, the function's single parameter will be the data returned by your mutation, which you can use to determine your cache object.
+
+##### typename
+
+If you have more than one object to update after your mutation, you can pass a `typename`, which will cause all objects in your cache with that typename to be modified.
+
+If you pass neither `cacheObject` nor `typename`, the modifier will assume `ROOT_QUERY`.
+
+##### fields
+
+This works the same as apollo's [cache.modify](https://www.apollographql.com/docs/react/caching/cache-interaction/#cachemodify), except that each field function gets passed only the `details` object. To make cache updating easier, the `details` object of each field function contains a few additional helpers:
+
+###### previous
+
+This is what used to be the field function's first parameter, the field's previous value. Since it is often not needed, it is now part of the `details` object and can simply be ignored.
+
+###### item
+
+The data returned by your mutation.
+
+###### itemRef
+
+The ref object that you should return in your modifier function. Equivalent to `cache.toReference(item)`.
+
+###### variables
+
+The variables that were used to create the field that you are currently modifying. Its stringified form is already available on `details.storeFieldName`, but a proper variables object is missing in apollo's implementation.
+
+###### includeIf
+
+If the field you are modifying is an array, you can call `includeIf` with a boolean parameter saying whether or not the mutation result should be part of the array. If it is not already part of it but should be, it will be added; if it is already part of it but shouldn't be, it will be removed.
+
+##### evict
+
+If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`. Use this if writing the cache update logic is impossible or too complicated. The deleted cache objects will be refetched the next time a query using them is rerendered. This should be used in place of [refetchQueries](https://www.apollographql.com/docs/react/caching/advanced-topics/#rerunning-queries-after-a-mutation) to avoid potentially bombarding the server with too many requests after a cache update. In combination with `useQuery`s reduced queries, this can be really powerful, because it causes only the invalidated fields to be refetched, not the entire query.
+
+Example:
+
+```js
+mutate({
+    input: someInput,
+    update: (cache, result) => {
+        cache.modify({
+            id: cache.identify(someObject),
+            fields: {
+                things: (previous, { readField, toReference }) => (
+                    const next = previous.filter((ref) => details.readField('id', ref) !== item.id);
+
+                    if (includeIf) {
+                        next.push(details.toReference(item));
+                    }
+
+                    return next;
+                ),
+            },
+        })
+    },
+});
+```
+
+is equivalent to:
+
+```js
+mutate({
+    input: someInput,
+    modifiers: [{
+        cacheObject: someObject,
+        fields: {
+            things: ({ includeIf }) => (
+                includeIf(true)
+            ),
+        },
+    }],
+});
+```
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
