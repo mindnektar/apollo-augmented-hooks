@@ -280,7 +280,7 @@ it('removes fields arbitrarily deep when using arrays', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
-it('keeps fields if no item in the cache with the same typename contains useful data to continue traversing', () => {
+it('removes fields if all items in the array contain a null value', () => {
     const queryInCache = `
         query {
             thing {
@@ -320,13 +320,6 @@ it('keeps fields if no item in the cache with the same typename contains useful 
                 things {
                     id
                     name
-                    thing {
-                        id
-                        name
-                        thing {
-                            id
-                        }
-                    }
                 }
             }
         }
@@ -356,7 +349,7 @@ it('keeps fields if no item in the cache with the same typename contains useful 
     compare(reducedQueryAst, actualQuery);
 });
 
-it('removes fields if there are other items in the cache with the same typename that contain useful data to continue traversing', () => {
+it('removes fields if there are other items in the array that contain useful data to continue traversing', () => {
     const queryInCache = `
         query {
             thing {

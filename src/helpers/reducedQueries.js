@@ -36,8 +36,7 @@ const getCacheObject = (cacheData, cacheObjectOrRef) => {
 const isPresentInCache = (cacheData, cacheObjectOrRef, fieldName) => {
     const cacheObject = getCacheObject(cacheData, cacheObjectOrRef);
 
-    // Null means that the cache object exists but contains no data (unlike undefined, which would
-    // mean the cache object is missing).
+    // Null means that the cache object exists but contains no data.
     if (cacheObject === null) {
         return true;
     }
@@ -54,17 +53,18 @@ const isPresentInCache = (cacheData, cacheObjectOrRef, fieldName) => {
 const findNextCacheObjectsOrRefs = (cacheData, cacheObjectsOrRefs, fieldName) => (
     cacheObjectsOrRefs.reduce((result, item) => {
         const itemCacheObject = getCacheObject(cacheData, item);
-        let fieldData = itemCacheObject[fieldName];
 
-        if (fieldData === null) {
+        if (itemCacheObject === null) {
             return result;
         }
 
-        if (!Array.isArray(itemCacheObject[fieldName])) {
-            fieldData = [fieldData];
+        const fieldData = itemCacheObject[fieldName];
+
+        if (Array.isArray(fieldData)) {
+            return [...result, ...fieldData];
         }
 
-        return [...result, ...fieldData];
+        return [...result, fieldData];
     }, [])
 );
 
@@ -104,6 +104,12 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
             // but it has returned null data or empty arrays for every single item.
             if (nextCacheObjectsOrRefs.length === 0) {
                 return [...result, selection];
+            }
+
+            // If every single item is in the cache but contains a null value, we can drop the rest
+            // of the selection because there will be no data on deeper levels.
+            if (nextCacheObjectsOrRefs.every((item) => item === null)) {
+                return result;
             }
 
             return handleSubSelections(
