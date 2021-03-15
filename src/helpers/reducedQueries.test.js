@@ -2,7 +2,13 @@ import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
 import { print } from 'graphql/language/printer';
 import { makeReducedQueryAst } from './reducedQueries';
 
-const cache = new InMemoryCache();
+const cache = new InMemoryCache({
+    typePolicies: {
+        WithKeyFields: {
+            keyFields: ['keyA', 'keyB'],
+        },
+    },
+});
 const client = new ApolloClient({ cache });
 
 const compare = (reducedQueryAst, actualQuery) => {
@@ -944,6 +950,106 @@ it('keeps fields if the data has been evicted from the cache', () => {
     });
 
     cache.evict({ id: 'Thing:some-id-2' });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('keeps non-id key fields', () => {
+    const queryInCache = `
+        query {
+            withKeyFields {
+                keyA
+                keyB
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            withKeyFields {
+                keyA
+                keyB
+                id
+                name
+                description
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            withKeyFields {
+                keyA
+                keyB
+                description
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            withKeyFields: {
+                __typename: 'WithKeyFields',
+                keyA: 'some-special-key-a',
+                keyB: 'some-special-key-b',
+                id: 'some-id',
+                name: 'some-name',
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('removes fields if they are already in the cache when using key fields', () => {
+    const queryInCache = `
+        query {
+            withKeyFields {
+                keyA
+                keyB
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            withKeyFields {
+                keyA
+                keyB
+                id
+                name
+            }
+            thing {
+                id
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            withKeyFields: {
+                __typename: 'WithKeyFields',
+                keyA: 'some-special-key-a',
+                keyB: 'some-special-key-b',
+                id: 'some-id',
+                name: 'some-name',
+            },
+        },
+    });
 
     const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
 

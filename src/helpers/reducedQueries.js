@@ -68,7 +68,17 @@ const findNextCacheObjectsOrRefs = (cacheData, cacheObjectsOrRefs, fieldName) =>
     }, [])
 );
 
-const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variables) => {
+const isKeyField = (cacheData, cacheObjectsOrRefs, fieldName, keyFields) => {
+    const cacheObject = cacheObjectsOrRefs.reduce((result, item) => (
+        result || getCacheObject(cacheData, item)
+    ), null);
+    // The default key field is "id", but it can be altered for specific typenames.
+    const keyFieldsForThisTypename = keyFields[cacheObject?.__typename] || ['id'];
+
+    return keyFieldsForThisTypename.includes(fieldName);
+};
+
+const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variables, keyFields) => {
     // If there is no cache object or reference, there is no data in the cache for this field, so we
     // keep this part of the query.
     if (cacheObjectsOrRefs === undefined) {
@@ -79,9 +89,9 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
         const fieldName = buildFieldName(selection, variables);
 
         if (
-            // Always keep the id field, otherwise apollo can't merge the cache items after the
+            // Always keep any key fields, otherwise apollo can't merge the cache items after the
             // request is done.
-            fieldName === 'id'
+            isKeyField(cacheData, cacheObjectsOrRefs, fieldName, keyFields)
             // Keep the entire selection if at least one of its items is not in the cache (it may
             // have been evicted at some point).
             || !cacheObjectsOrRefs.every((item) => isPresentInCache(cacheData, item, fieldName))
@@ -101,7 +111,7 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
 
             // If we can't find any data for this field in the cache at all, we'll keep the entire
             // selection. This may also be the case if we have already requested this field before,
-            // but it has returned null data or empty arrays for every single item.
+            // but it has returned empty arrays for every single item.
             if (nextCacheObjectsOrRefs.length === 0) {
                 return [...result, selection];
             }
@@ -113,18 +123,19 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
             }
 
             return handleSubSelections(
-                result, selection, cacheData, nextCacheObjectsOrRefs, variables,
+                result, selection, cacheData, nextCacheObjectsOrRefs, variables, keyFields,
             );
         }
 
         return result;
     }, []);
 
-    // If the reduced selection set is empty or only contains the mandatory id, the cache already
+    // If the reduced selection set is empty or only contains key fields, the cache already
     // contains all the data we need, so we can ignore this selection.
     if (
-        reducedSelections.length <= 1
-        && (!reducedSelections[0] || reducedSelections[0].name.value === 'id')
+        reducedSelections.every(({ name }) => (
+            isKeyField(cacheData, cacheObjectsOrRefs, name.value, keyFields)
+        ))
     ) {
         return [];
     }
@@ -132,12 +143,11 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
     return reducedSelections;
 };
 
-const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, variables) => {
+const handleSubSelections = (
+    result, selection, cacheData, cacheObjectsOrRefs, variables, keyFields
+) => {
     const subSelections = filterSubSelections(
-        selection.selectionSet.selections,
-        cacheData,
-        cacheObjectsOrRefs,
-        variables,
+        selection.selectionSet.selections, cacheData, cacheObjectsOrRefs, variables, keyFields,
     );
 
     if (subSelections.length === 0) {
@@ -163,8 +173,24 @@ const hasVariable = (selectionSet, variable) => (
     ))
 );
 
+const getKeyFields = (cache) => {
+    const typePolicies = Object.entries(cache.config.typePolicies);
+
+    return typePolicies.reduce((result, [typename, { keyFields }]) => {
+        if (!keyFields) {
+            return result;
+        }
+
+        return {
+            ...result,
+            [typename]: keyFields,
+        };
+    }, {});
+};
+
 export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const cacheContents = cache.extract();
+    const keyFields = getKeyFields(cache);
 
     // Recursively iterate through the entire graphql query tree, removing the fields for which we
     // already have data in the cache.
@@ -183,11 +209,7 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
             }
 
             return handleSubSelections(
-                result,
-                selection,
-                cacheContents,
-                cacheObjectsOrRefs,
-                variables
+                result, selection, cacheContents, cacheObjectsOrRefs, variables, keyFields
             );
         }, [])
     );
