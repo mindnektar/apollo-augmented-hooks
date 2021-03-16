@@ -787,6 +787,59 @@ it('removes the variable definition if it is no longer used', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('keeps the variable definition if it is used in directives', () => {
+    const queryInCache = `
+        query test {
+            things {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query test($isIncluded: Boolean, $isNotIncluded: Boolean) {
+            things @include(if: $isNotIncluded) {
+                id
+                name
+            }
+            moreThings @include(if: $isIncluded) {
+                id
+                name
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__test($isIncluded: Boolean) {
+            moreThings @include(if: $isIncluded) {
+                id
+                name
+            }
+        }
+    `;
+    const variables = {
+        filter: {
+            isIncluded: true,
+            $isNotIncluded: true,
+        },
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                __typename: 'Thing',
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+        variables,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), variables);
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('removes fields if they are in the cache but have no id', () => {
     const queryInCache = `
         query {

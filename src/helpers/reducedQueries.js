@@ -167,10 +167,17 @@ const handleSubSelections = (
 };
 
 const hasVariable = (selectionSet, variable) => (
-    (selectionSet?.selections || []).some((selection) => (
-        selection.arguments.some(({ value }) => value?.name?.value === variable)
-        || hasVariable(selection.selectionSet, variable)
-    ))
+    (selectionSet?.selections || []).some((selection) => {
+        const isVariableInArguments = selection.arguments.some(({ value }) => (
+            value?.name?.value === variable
+        ));
+        const isVariableInDirectives = selection.directives.some((directive) => (
+            directive.arguments.some(({ value }) => value?.name?.value === variable)
+        ));
+        const isVariableInSelectionSet = hasVariable(selection.selectionSet, variable);
+
+        return isVariableInArguments || isVariableInDirectives || isVariableInSelectionSet;
+    })
 );
 
 const getKeyFields = (cache) => {
