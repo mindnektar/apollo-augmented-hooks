@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { gql, useQuery } from '@apollo/client';
 import { makeReducedQueryAst } from './helpers/reducedQueries';
+import { getVariablesWithPagination, handleNextPage } from './helpers/pagination';
 import apolloClient from './apolloClient';
 
 // Create a reduced version of the query that contains only the fields that are not in the
@@ -14,14 +15,18 @@ const getQueryAst = (queryAst, client, options) => (
 );
 
 export default (query, options = {}) => {
+    const cacheDataRef = useRef();
     const client = apolloClient();
     const queryAst = gql(query);
+
     // Functional default state to avoid recomputing the reduced query on each render.
     const [reducedQueryAst, setReducedQueryAst] = useState(() => (
         getQueryAst(queryAst, client, options)
     ));
+
     const reducedResult = useQuery(reducedQueryAst, {
         ...options,
+        variables: getVariablesWithPagination(options),
         client,
         // Always fetch data from the server on component mount when polling is enabled.
         // Polling indicates that fresh data is more important than caching, so prefer an extra
@@ -38,6 +43,7 @@ export default (query, options = {}) => {
             setReducedQueryAst(getQueryAst(queryAst, client, options));
         },
     });
+
     // Grab all the requested data from the cache. If some or all of the data is missing, the
     // reduced query above will get it.
     const cacheResult = useQuery(queryAst, {
@@ -46,8 +52,14 @@ export default (query, options = {}) => {
         fetchPolicy: 'cache-only',
     });
 
+    // Store cache result in ref so its contents remain fresh when calling `nextPage`.
+    useEffect(() => {
+        cacheDataRef.current = cacheResult.data;
+    }, [cacheResult?.data]);
+
     return {
         ...reducedResult,
+        nextPage: handleNextPage(queryAst, cacheDataRef.current, reducedResult, options.pagination),
         data: cacheResult.data,
         // XXX: Make the loading state dependent on the presence of data in the cache query result.
         // This is a workaround for https://github.com/apollographql/react-apollo/issues/2601
