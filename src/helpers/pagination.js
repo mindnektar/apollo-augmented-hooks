@@ -1,4 +1,4 @@
-export const handleNextPage = (queryAst, cacheData, reducedResult, pagination) => (
+export const handleNextPage = (queryAst, cacheDataRef, reducedResult, pagination) => (
     async () => {
         const { selections } = queryAst.definitions[0].selectionSet;
         const paginatedField = selections.find((selection) => (
@@ -9,7 +9,7 @@ export const handleNextPage = (queryAst, cacheData, reducedResult, pagination) =
             throw new Error('Cannot call `nextPage` when there is no field with a pagination parameter.');
         }
 
-        const data = cacheData[paginatedField.name.value];
+        const data = cacheDataRef.current[paginatedField.name.value];
 
         const result = await reducedResult.fetchMore({
             variables: {

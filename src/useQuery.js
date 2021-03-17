@@ -18,6 +18,7 @@ export default (query, options = {}) => {
     const cacheDataRef = useRef();
     const client = apolloClient();
     const queryAst = gql(query);
+    const variables = getVariablesWithPagination(options);
 
     // Functional default state to avoid recomputing the reduced query on each render.
     const [reducedQueryAst, setReducedQueryAst] = useState(() => (
@@ -26,7 +27,7 @@ export default (query, options = {}) => {
 
     const reducedResult = useQuery(reducedQueryAst, {
         ...options,
-        variables: getVariablesWithPagination(options),
+        variables,
         client,
         // Always fetch data from the server on component mount when polling is enabled.
         // Polling indicates that fresh data is more important than caching, so prefer an extra
@@ -48,7 +49,7 @@ export default (query, options = {}) => {
     // reduced query above will get it.
     const cacheResult = useQuery(queryAst, {
         client,
-        variables: options.variables,
+        variables,
         fetchPolicy: 'cache-only',
     });
 
@@ -59,7 +60,7 @@ export default (query, options = {}) => {
 
     return {
         ...reducedResult,
-        nextPage: handleNextPage(queryAst, cacheDataRef.current, reducedResult, options.pagination),
+        nextPage: handleNextPage(queryAst, cacheDataRef, reducedResult, options.pagination),
         data: cacheResult.data,
         // XXX: Make the loading state dependent on the presence of data in the cache query result.
         // This is a workaround for https://github.com/apollographql/react-apollo/issues/2601
