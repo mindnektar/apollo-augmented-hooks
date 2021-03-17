@@ -2,7 +2,7 @@ import { useSubscription, gql } from '@apollo/client';
 import apolloClient from './apolloClient';
 import { handleModifiers } from './helpers/modifiers';
 
-export default (subscription, options) => {
+export default (subscription, options = {}) => {
     const client = apolloClient();
     const subscriptionAst = gql(subscription);
     const subscriptionName = subscriptionAst.definitions[0].selectionSet.selections[0].name.value;
