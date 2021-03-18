@@ -1,7 +1,10 @@
 // Apollo offers no streamlined way to extract the query variables for the cache object we are
 // modifying, so this helper has to exist.
 const getVariables = (details) => {
-    const variableString = details.storeFieldName.match(/\((.*)\)/)?.[1];
+    const variableString = (
+        details.storeFieldName.match(/\((.+)\)/)?.[1]
+        || details.storeFieldName.match(/:(.+)/)?.[1]
+    );
 
     return variableString ? JSON.parse(variableString) : null;
 };
