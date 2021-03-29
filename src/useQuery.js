@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { gql, useQuery } from '@apollo/client';
 import { makeReducedQueryAst } from './helpers/reducedQueries';
 import { getVariablesWithPagination, handleNextPage } from './helpers/pagination';
+import { registerRequest, deregisterRequest } from './helpers/inFlightTracking';
 import apolloClient from './apolloClient';
 
 // Create a reduced version of the query that contains only the fields that are not in the
@@ -29,6 +30,9 @@ export default (query, options = {}) => {
         ...options,
         variables,
         client,
+        // This toggles `loading` every time a polling request starts and completes. We need this
+        // for the effect hook to work.
+        notifyOnNetworkStatusChange: !!options.pollInterval,
         // Always fetch data from the server on component mount when polling is enabled.
         // Polling indicates that fresh data is more important than caching, so prefer an extra
         // request on mount rather than waiting the duration of the poll interval for the first poll
@@ -44,6 +48,23 @@ export default (query, options = {}) => {
             setReducedQueryAst(getQueryAst(queryAst, client, options));
         },
     });
+
+    // Remember all the query requests that are currently in flight, so we can ensure that any mutations
+    // happening while such a request is in flight updates the cache *after* the request completes and
+    // is not overwritten by potentially stale data.
+    useEffect(() => {
+        if (reducedResult.loading) {
+            registerRequest(query);
+        } else {
+            deregisterRequest(query);
+        }
+    }, [reducedResult.loading]);
+
+    useEffect(() => (
+        () => {
+            deregisterRequest(query);
+        }
+    ), []);
 
     // Grab all the requested data from the cache. If some or all of the data is missing, the
     // reduced query above will get it.

@@ -1,6 +1,7 @@
 import { gql, useMutation } from '@apollo/client';
 import { handleOptimisticResponse } from './helpers/optimisticResponse';
 import { handleModifiers } from './helpers/modifiers';
+import { waitForRequestsInFlight, areRequestsInFlight } from './helpers/inFlightTracking';
 import apolloClient from './apolloClient';
 
 export default (mutation, hookOptions = {}) => {
@@ -24,12 +25,24 @@ export default (mutation, hookOptions = {}) => {
                 // overhead.
                 handleOptimisticResponse(options.optimisticResponse, input, mutationName)
             ),
-            update: (cache, result) => {
-                // Simplify cache updates after mutations.
-                handleModifiers(cache, result.data[mutationName], options.modifiers);
+            update: async (cache, result) => {
+                const c = cache;
 
                 if (options.update) {
-                    options.update(cache, result);
+                    options.update(c, result);
+                }
+
+                // Simplify cache updates after mutations.
+                handleModifiers(c, result.data[mutationName], options.modifiers);
+
+                // If this is a server response (and not an optimistic response), wait until any queries
+                // in flight are completed, to avoid the mutation result getting overwritten by
+                // potentially stale data. This is done in addition to the regular cache update above
+                // because apollo doesn't like asynchronous post-mutation updates and would restore the
+                // previous cache result otherwise.
+                if (!result.data.__optimistic && areRequestsInFlight()) {
+                    await waitForRequestsInFlight();
+                    handleModifiers(c, result.data[mutationName], options.modifiers);
                 }
             },
         })
