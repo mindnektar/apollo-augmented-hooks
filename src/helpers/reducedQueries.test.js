@@ -355,6 +355,65 @@ it('removes fields if all items in the array contain a null value', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('removes fields if the cache item is there but the array is empty', () => {
+    const queryInCache = `
+        query {
+            thing {
+                id
+                things {
+                    id
+                    thing {
+                        id
+                        name
+                    }
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing {
+                id
+                name
+                things {
+                    id
+                    name
+                    thing {
+                        id
+                        name
+                        thing {
+                            id
+                        }
+                    }
+                }
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+                name
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+                things: [],
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('removes fields if there are other items in the array that contain useful data to continue traversing', () => {
     const queryInCache = `
         query {

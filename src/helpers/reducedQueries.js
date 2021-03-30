@@ -105,15 +105,13 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
             // values. By not only using a single object as a reference but rather as many like
             // objects as possible, we increase our chances of finding a useful reference for any
             // deeper-level fields.
-            const nextCacheObjectsOrRefs = findNextCacheObjectsOrRefs(
-                cacheData, cacheObjectsOrRefs, fieldName
-            );
+            const nextCacheObjectsOrRefs = findNextCacheObjectsOrRefs(cacheData, cacheObjectsOrRefs, fieldName);
 
             // If we can't find any data for this field in the cache at all, we'll keep the entire
             // selection. This may also be the case if we have already requested this field before,
             // but it has returned empty arrays for every single item.
             if (nextCacheObjectsOrRefs.length === 0) {
-                return [...result, selection];
+                return result;
             }
 
             // If every single item is in the cache but contains a null value, we can drop the rest
@@ -122,9 +120,7 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
                 return result;
             }
 
-            return handleSubSelections(
-                result, selection, cacheData, nextCacheObjectsOrRefs, variables, keyFields,
-            );
+            return handleSubSelections(result, selection, cacheData, nextCacheObjectsOrRefs, variables, keyFields);
         }
 
         return result;
@@ -132,23 +128,15 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
 
     // If the reduced selection set is empty or only contains key fields, the cache already
     // contains all the data we need, so we can ignore this selection.
-    if (
-        reducedSelections.every(({ name }) => (
-            isKeyField(cacheData, cacheObjectsOrRefs, name.value, keyFields)
-        ))
-    ) {
+    if (reducedSelections.every(({ name }) => isKeyField(cacheData, cacheObjectsOrRefs, name.value, keyFields))) {
         return [];
     }
 
     return reducedSelections;
 };
 
-const handleSubSelections = (
-    result, selection, cacheData, cacheObjectsOrRefs, variables, keyFields
-) => {
-    const subSelections = filterSubSelections(
-        selection.selectionSet.selections, cacheData, cacheObjectsOrRefs, variables, keyFields,
-    );
+const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, variables, keyFields) => {
+    const subSelections = filterSubSelections(selection.selectionSet.selections, cacheData, cacheObjectsOrRefs, variables, keyFields);
 
     if (subSelections.length === 0) {
         return result;
@@ -215,9 +203,7 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
                 cacheObjectsOrRefs = [cacheObjectsOrRefs];
             }
 
-            return handleSubSelections(
-                result, selection, cacheContents, cacheObjectsOrRefs, variables, keyFields
-            );
+            return handleSubSelections(result, selection, cacheContents, cacheObjectsOrRefs, variables, keyFields);
         }, [])
     );
     // Construct a new tree from the reduced selection set.
