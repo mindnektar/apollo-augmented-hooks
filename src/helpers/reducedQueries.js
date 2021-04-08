@@ -107,7 +107,7 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
             // deeper-level fields.
             const nextCacheObjectsOrRefs = findNextCacheObjectsOrRefs(cacheData, cacheObjectsOrRefs, fieldName);
 
-            // If we can't find any data for this field in the cache at all, we'll keep the entire
+            // If we can't find any data for this field in the cache at all, we'll drop the entire
             // selection. This may also be the case if we have already requested this field before,
             // but it has returned empty arrays for every single item.
             if (nextCacheObjectsOrRefs.length === 0) {
@@ -186,7 +186,6 @@ const getKeyFields = (cache) => {
 export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const cacheContents = cache.extract();
     const keyFields = getKeyFields(cache);
-
     // Recursively iterate through the entire graphql query tree, removing the fields for which we
     // already have data in the cache.
     const selections = (
@@ -231,10 +230,9 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
     };
 
     // If the reduced query happens to have no more selections because everything is already
-    // available in the cache, simply return the original query. Apollo will fetch everything from
-    // the cache by itself rather than make a request to the server.
+    // available in the cache, return null so we can skip this query.
     if (reducedQueryAst.definitions[0].selectionSet.selections.length === 0) {
-        return queryAst;
+        return null;
     }
 
     return reducedQueryAst;

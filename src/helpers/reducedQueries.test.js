@@ -610,7 +610,7 @@ it('keeps fields if there are other items in the cache with the same typename th
     compare(reducedQueryAst, actualQuery);
 });
 
-it('keeps fields if it exists in the cache but the value is null', () => {
+it('removes fields if it exists in the cache but the value is null', () => {
     const queryInCache = `
         query {
             thing {
@@ -627,14 +627,15 @@ it('keeps fields if it exists in the cache but the value is null', () => {
                 name
                 description
             }
+            otherThing {
+                id
+            }
         }
     `;
     const actualQuery = `
-        {
-            thing {
+        query __REDUCED__ {
+            otherThing {
                 id
-                name
-                description
             }
         }
     `;
@@ -977,7 +978,7 @@ it('removes fields if they are in the cache but have no id', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
-it('returns the same query if all the requested data is in the cache', () => {
+it('returns null if all the requested data is in the cache', () => {
     const queryInCache = `
         query {
             thing {
@@ -1003,7 +1004,7 @@ it('returns the same query if all the requested data is in the cache', () => {
 
     const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
 
-    expect(reducedQueryAst).toEqual(gql(requestedQuery));
+    expect(reducedQueryAst).toEqual(null);
 });
 
 it('keeps fields if the data has been evicted from the cache', () => {

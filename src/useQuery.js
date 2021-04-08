@@ -26,7 +26,9 @@ export default (query, options = {}) => {
         getQueryAst(queryAst, client, options)
     ));
 
-    const reducedResult = useQuery(reducedQueryAst, {
+    const reducedResult = useQuery(reducedQueryAst || queryAst, {
+        // If all the requested data is already in the cache, we can skip this query.
+        skip: !reducedQueryAst,
         ...options,
         variables,
         client,
@@ -65,6 +67,12 @@ export default (query, options = {}) => {
             deregisterRequest(query);
         }
     ), []);
+
+    // Whenever the query variables change, we need to generate a new reduced query because we are in
+    // fact dealing with a new query.
+    useEffect(() => {
+        setReducedQueryAst(getQueryAst(queryAst, client, options));
+    }, [JSON.stringify(options.variables || {})]);
 
     // Grab all the requested data from the cache. If some or all of the data is missing, the
     // reduced query above will get it.
