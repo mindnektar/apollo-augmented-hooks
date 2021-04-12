@@ -3,6 +3,7 @@ import useMutation from './useMutation';
 import useSubscription from './useSubscription';
 import combineResults from './combineResults';
 import initAugmentedHooks from './apolloClient';
+import { setGlobalContextHook } from './globalContextHook';
 
 export {
     useQuery,
@@ -10,4 +11,5 @@ export {
     useSubscription,
     combineResults,
     initAugmentedHooks,
+    setGlobalContextHook,
 };

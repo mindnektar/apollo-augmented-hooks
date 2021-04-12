@@ -4,6 +4,7 @@ import { makeReducedQueryAst } from './helpers/reducedQueries';
 import { getVariablesWithPagination, handleNextPage } from './helpers/pagination';
 import { registerRequest, deregisterRequest } from './helpers/inFlightTracking';
 import apolloClient from './apolloClient';
+import { useGlobalContext } from './globalContextHook';
 
 // Create a reduced version of the query that contains only the fields that are not in the
 // cache already. Do not do this when polling, because polling implies the need for fresh data.
@@ -20,6 +21,7 @@ export default (query, options = {}) => {
     const client = apolloClient();
     const queryAst = gql(query);
     const variables = getVariablesWithPagination(options);
+    const globalContext = useGlobalContext();
 
     // Functional default state to avoid recomputing the reduced query on each render.
     const [reducedQueryAst, setReducedQueryAst] = useState(() => (
@@ -34,6 +36,10 @@ export default (query, options = {}) => {
         // If all the requested data is already in the cache, we can skip this query.
         skip: !reducedQueryAst,
         ...options,
+        context: {
+            ...globalContext,
+            ...options.context,
+        },
         variables,
         client,
         // This toggles `loading` every time a polling request starts and completes. We need this

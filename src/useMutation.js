@@ -3,6 +3,7 @@ import { handleOptimisticResponse } from './helpers/optimisticResponse';
 import { handleModifiers } from './helpers/modifiers';
 import { waitForRequestsInFlight, areRequestsInFlight } from './helpers/inFlightTracking';
 import apolloClient from './apolloClient';
+import { useGlobalContext } from './globalContextHook';
 
 export default (mutation, hookOptions = {}) => {
     const client = apolloClient();
@@ -13,6 +14,7 @@ export default (mutation, hookOptions = {}) => {
         client,
     });
     const args = mutationAst.definitions[0].selectionSet.selections[0].arguments;
+    const globalContext = useGlobalContext();
 
     return ({ input, ...options } = {}) => (
         mutate({
@@ -20,6 +22,10 @@ export default (mutation, hookOptions = {}) => {
             // most of the time ($input or $id), reducing overhead.
             variables: args.length === 1 ? { [args[0].name.value]: input } : input,
             ...options,
+            context: {
+                ...globalContext,
+                ...options.context,
+            },
             optimisticResponse: (
                 // Automatically prepend what is common across all optimistic responses, reducing
                 // overhead.
