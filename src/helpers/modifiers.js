@@ -23,18 +23,29 @@ const handleIncludeIf = (cache, item, previous, details) => (
     }
 );
 
+let shouldResetReducedQueries = false;
+
 const augmentFields = (cache, item, fields) => {
-    const modify = (callback, previous, details) => (
+    const modify = (callback, previous, details) => {
         // Attach a couple additional helpers to apollo's standard details object.
-        callback({
+        const callbackResult = callback({
             ...details,
             previous,
             item,
             itemRef: details.toReference(item),
             variables: getVariables(details),
             includeIf: handleIncludeIf(cache, item, previous, details),
-        })
-    );
+        });
+
+        // Since the reduced queries are cached, they need to be notified when the DELETE sentinel
+        // object is returned, so that a refetch happens if they include the deleted field. We set
+        // the flag here and trigger the respective event after all modifiers have been handled.
+        if (callbackResult === details.DELETE) {
+            shouldResetReducedQueries = true;
+        }
+
+        return callbackResult;
+    };
 
     if (typeof fields === 'function') {
         return (previous, details) => (
@@ -96,4 +107,11 @@ export const handleModifiers = (cache, item, modifiers) => {
             }
         });
     });
+
+    // If at least one modifier contained a field returning the DELETE sentinel object, cause all
+    // active reduced queries to recompute, so that a refetch happens if they include the deleted field.
+    if (shouldResetReducedQueries) {
+        window.dispatchEvent(new Event('reset-reduced-queries'));
+        shouldResetReducedQueries = false;
+    }
 };

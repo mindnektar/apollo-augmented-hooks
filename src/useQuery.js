@@ -26,6 +26,10 @@ export default (query, options = {}) => {
         getQueryAst(queryAst, client, options)
     ));
 
+    const resetReducedQueries = () => {
+        setReducedQueryAst(getQueryAst(queryAst, client, options));
+    };
+
     const reducedResult = useQuery(reducedQueryAst || queryAst, {
         // If all the requested data is already in the cache, we can skip this query.
         skip: !reducedQueryAst,
@@ -47,7 +51,7 @@ export default (query, options = {}) => {
             // The reduced query is kept in state to avoid making another request if a request is
             // already in flight and the cache contents change in the meantime. Once the request is
             // completed, we can recompute the reduced query.
-            setReducedQueryAst(getQueryAst(queryAst, client, options));
+            resetReducedQueries();
         },
     });
 
@@ -68,10 +72,20 @@ export default (query, options = {}) => {
         }
     ), []);
 
+    // Listen for mutation modifiers requesting a reduced query reset. This happens if one or more
+    // modifiers returned the DELETE sentinel object.
+    useEffect(() => {
+        window.addEventListener('reset-reduced-queries', resetReducedQueries);
+
+        return () => {
+            window.removeEventListener('reset-reduced-queries', resetReducedQueries);
+        };
+    }, []);
+
     // Whenever the query variables change, we need to generate a new reduced query because we are in
     // fact dealing with a new query.
     useEffect(() => {
-        setReducedQueryAst(getQueryAst(queryAst, client, options));
+        resetReducedQueries();
     }, [JSON.stringify(options.variables || {})]);
 
     // Grab all the requested data from the cache. If some or all of the data is missing, the
