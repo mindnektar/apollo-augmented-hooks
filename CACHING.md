@@ -300,7 +300,7 @@ The server returns:
         updateUserEmail: {
             __typename: 'User',
             id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
-            email: 'test@example.com'
+            email: 'mindnektar@example.com'
         }
     }
 }
@@ -320,7 +320,7 @@ Because we already have an item with the key `User:2adb1120-d911-4196-ab1b-d5043
         __typename: 'User',
         id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
         name: 'mindnektar,
-        email: 'test@example.com'
+        email: 'mindnektar@example.com'
     }
 }
 ```
@@ -328,3 +328,50 @@ Because we already have an item with the key `User:2adb1120-d911-4196-ab1b-d5043
 If we hadn't requested the id along with the email, `ApolloClient` would have been unable to find the matching item in the cache and no update would have occurred. I will reiterate again: Always include the id field (or any other applicable key fields) everywhere.
 
 When it comes to adding or deleting cache items however, `ApolloClient` can't possibly know what we expect to happen with the mutation response, so we have to do that manually. There are a couple of ways to achieve that. Before Apollo 3, cache updates were quite cumbersome and caused a lot of overhead. You had to use methods like `cache.readQuery`, `cache.writeQuery`, `cache.readFragement` and `cache.writeFragment`, which required you to use queries much like the ones you use to request data from the server. We will ignore those methods in favour of `cache.modify`, which is easier to use and much more flexible. Unfortunately, even `cache.modify` has its slew of problems, many of which `apollo-augmented-hooks` attempts to solve. We will take a look at how cache updates work the regular way using `cache.modify`, and then contrast that with the `apollo-augmented-hooks` solution.
+
+## How do I add something to the cache?
+
+Keeping with the example above, our cache initially looks like this:
+
+```
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        users: [{
+            __ref: 'User:2adb1120-d911-4196-ab1b-d5043cc7a00a'
+        }]
+    },
+    'User:2adb1120-d911-4196-ab1b-d5043cc7a00a': {
+        __typename: 'User',
+        id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
+        name: 'mindnektar
+    }
+}
+```
+
+Now we create a new user with this mutation:
+
+```
+mutation {
+    createUser(name: "foobar") {
+        id
+        name
+    }
+}
+```
+
+The server returns:
+
+```
+{
+    data: {
+        createUser: {
+            __typename: 'User',
+            id: '141738bf-3622-4beb-b0c5-0622e1e7311f',
+            name: 'foobar'
+        }
+    }
+}
+```
+
+The cache does not include a user with this id, so no automatic update are performed. 
