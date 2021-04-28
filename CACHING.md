@@ -151,3 +151,89 @@ Because the cache is normalised, it will now look like this:
 The `ROOT_QUERY` looks exactly like before, and each todo contains a reference to the user. And even though - since both todos are allocated to the same user - the server responded with duplicated data (the user's name attached to each todo), the cache's normalisation causes that data to be present only once.
 
 This behaviour has one great advantage: Whenever a cache item is updated (e.g. because the user's name has changed), the entire cache object (with possibly hundreds or thousands of items) doesn't have to be traversed in search for instances of that user, but only a single item needs to be taken care of.
+
+## What if I am requesting a field that doesn't have an id?
+
+The cache item won't be normalised. An example query:
+
+```
+query {
+    todos {
+        id
+        title
+        user {
+            name
+        }
+    }
+}
+```
+
+The server response:
+
+```
+{
+    data: {
+        todos: [{
+            id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
+            title: 'Buy groceries',
+            user: {
+                name: 'mindnektar
+            }
+        }, {
+            id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
+            title: 'Do the dishes',
+            user: {
+                name: 'mindnektar
+            }
+        }]
+    }
+}
+```
+
+And the cache:
+
+```
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        todos: [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }, {
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }]
+    },
+    'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8': {
+        __typename: 'Todo',
+        id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
+        title: 'Buy groceries',
+        user: {
+            name: 'mindnektar
+        }
+    },
+    'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1': {
+        __typename: 'Todo',
+        id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
+        title: 'Do the dishes',
+        user: {
+            name: 'mindnektar
+        }
+    }
+}
+```
+
+This should be avoided at all costs. If any data of an unnormalised cache item needs to be updated, you will have to manually update each occurrence in the entire cache, which is unmaintainable. You must also never request the same thing sometimes with an id and sometimes without, because `ApolloClient` will throw an error when trying to update the cache after such a query.
+
+Let me reiterate: Always include an id for each requested field.
+
+Of course, sometimes an id might not be available because that particular type is identified differently, either by another name or by a combination of fields:
+
+```
+query {
+    users {
+        name
+        email
+    }
+}
+```
+
+Maybe users have no id and are instead identified by their combination of name and email. Luckily, you can very easily specify these exceptions in your `InMemoryCache` [configuration](https://www.apollographql.com/docs/react/caching/cache-configuration/#customizing-identifier-generation-by-type).
