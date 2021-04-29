@@ -374,7 +374,7 @@ The server returns:
 }
 ```
 
-The cache does not include a user with this id, so no automatic update are performed. Let's take a look at the mutation hook:
+The cache does not include a user with this id, so no automatic updates are performed. Let's take a look at the mutation hook:
 
 ```
 import { gql, useMutation } from '@apollo/client';
@@ -403,7 +403,7 @@ export default () => {
 
 When calling the mutate function returned by this hook, the server request will be launched. Once it completes, the update function passed to the mutate function will be called, allowing you to manipulate the cache using the mutation result. We do that by calling `cache.modify`. `cache.modify` accepts a single options parameter, and for the vast majority of use cases you'll only need two of these options: `id` and `fields`.
 
-Remembering the shape of the normalised cache object, each key references either an item in the cache or the `ROOT_QUERY`. `cache.modify`'s `id` option lets you choose which cache item should be modified. For example, to modify a specific user, you might pass `User:2adb1120-d911-4196-ab1b-d5043cc7a00a`, or to modify the root query, you'll either pass `ROOT_QUERY` or simply omit the `id` option.
+Remembering the shape of the normalised cache object, each key references either an item in the cache or the `ROOT_QUERY`. `cache.modify`'s `id` option lets you choose which cache item to modify. For example, to modify a specific user, you might pass `User:2adb1120-d911-4196-ab1b-d5043cc7a00a`, or to modify the root query, you'll either pass `ROOT_QUERY` or simply omit the `id` option.
 
 `fields` is a bit more complex. It is an object that allows you to specify how each field of the chosen cache item should be modified. In our example above, we are creating a new user, so it stands to reason that we would like to add it to our list of users in the cache. This can be done the following way:
 
@@ -557,7 +557,7 @@ update: (cache, mutationResult) => {
 
 If we specifiy the `todos` field, the modifier function will be called once for every single cache item that was created with the todos query. The result is straightforward: Our new todo will be added to each cache item, no matter if it matches the parameters or not. This means that we may now have incorrect data in the cache. What we need to do instead is check if the new todo should be added to the cache item in each call of the modifier function.
 
-Unfortunately, Apollo doesn't provide a convenient way to tell what the parameters for the current modifier function call are. The only thing we get is the `storeFieldName` helper. It contains the full name of the `todos` field we're currently handling, so e.g. `todos({"filter":{"from":"2021-04-01","to":"2021-04-30"}})`. So the filter parameters are there, but it is on you to extract the data from the string so you can do your checks, possibly like this:
+Unfortunately, Apollo doesn't provide a convenient way to tell what the parameters for the current modifier function call are. The only thing we get is the `storeFieldName` helper. It contains the full name of the `todos` field we're currently handling, so e.g. `todos({"filter":{"from":"2021-04-01","to":"2021-04-30"}})`. So while the filter parameters can be accessed, it is on you to extract the data from the string so you can do your checks, possibly like this:
 
 ```
 update: (cache, mutationResult) => {
@@ -581,6 +581,6 @@ update: (cache, mutationResult) => {
 }
 ```
 
-While this is already annoying enough, there are some cases in which the parameterised cache keys are formatted like this instead: `todos:{"filter":{"from":"2021-04-01","to":"2021-04-30"}}`, so you'll have to handle those cases as well. All of these things are not mentioned in the official documentation, so you'll have to stumble across them yourself or one of the [many](https://github.com/apollographql/react-apollo/issues/708) [years-spanning](https://github.com/apollographql/apollo-client/issues/1697) [github](https://github.com/apollographql/apollo-client/issues/2991) [issues](https://github.com/apollographql/apollo-client/issues/1546) where people are endlessly discussing this. That's why this is one of the issues that `apollo-augmented-hooks` seeks to solve.
+Though this is already annoying enough, there are some cases in which the parameterised cache keys are formatted like this instead: `todos:{"filter":{"from":"2021-04-01","to":"2021-04-30"}}`, so you'll have to handle those cases as well. All of these things are not mentioned in the official documentation, so you'll have to stumble across them yourself or one of the [many](https://github.com/apollographql/react-apollo/issues/708) [years-spanning](https://github.com/apollographql/apollo-client/issues/1697) [github](https://github.com/apollographql/apollo-client/issues/2991) [issues](https://github.com/apollographql/apollo-client/issues/1546) where people are endlessly discussing this. That's why this is one of the issues that `apollo-augmented-hooks` seeks to solve.
 
 ## So how do I add something to the cache using apollo-augmented-hooks?
