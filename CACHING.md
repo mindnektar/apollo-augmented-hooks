@@ -374,4 +374,213 @@ The server returns:
 }
 ```
 
-The cache does not include a user with this id, so no automatic update are performed. 
+The cache does not include a user with this id, so no automatic update are performed. Let's take a look at the mutation hook:
+
+```
+import { gql, useMutation } from '@apollo/client';
+
+const mutation = gql`
+    mutation {
+        createUser(name: "foobar") {
+            id
+            name
+        }
+    }
+`;
+
+export default () => {
+    const [mutate] = useMutation(mutation);
+
+    return () => (
+        mutate({
+            update: (cache, mutationResult) => {
+                // TODO: Update cache here
+            }
+        })
+    )
+}
+```
+
+When calling the mutate function returned by this hook, the server request will be launched. Once it completes, the update function passed to the mutate function will be called, allowing you to manipulate the cache using the mutation result. We do that by calling `cache.modify`. `cache.modify` accepts a single options parameter, and for the vast majority of use cases you'll only need two of these options: `id` and `fields`.
+
+Remembering the shape of the normalised cache object, each key references either an item in the cache or the `ROOT_QUERY`. `cache.modify`'s `id` option lets you choose which cache item should be modified. For example, to modify a specific user, you might pass `User:2adb1120-d911-4196-ab1b-d5043cc7a00a`, or to modify the root query, you'll either pass `ROOT_QUERY` or simply omit the `id` option.
+
+`fields` is a bit more complex. It is an object that allows you to specify how each field of the chosen cache item should be modified. In our example above, we are creating a new user, so it stands to reason that we would like to add it to our list of users in the cache. This can be done the following way:
+
+```
+update: (cache, mutationResult) => {
+    cache.modify({
+        fields: {
+            users: (previous) => {
+                const newUserRef = cache.writeFragment({
+                    data: mutationResult.data.createUser,
+                    fragment: gql`
+                        fragment NewUser on User {
+                            id
+                            name
+                        }
+                    `
+                });
+                    
+                return [...previous, newUserRef];
+            }
+        }
+    })
+}
+```
+
+As you can see, even in this very simple example, the cache modification is rather verbose already. Here's what's happening: We're calling `cache.modify` with its options parameter, omitting `id` (because we want to modify the root query) and passing `fields`. `fields` is an object containing all the fields that we wish to modify on the cache item - in this case we are only interested in `users`, but we could modify any number of fields on the root query at once. `users` is a modifier function. It has two parameters: the current cache contents and an object containing several helpers for interacting with the cache. In our example, we only need the current cache contents, so we omit the second parameter. The modifier function expects us to return the new cache contents, so with `[...previous, newUserRef]` we do exactly that: we return an array with all the previous users and the user that was just created.
+
+Now the question is, why do we have to do all that `cache.writeFragment` stuff rather than just return `[...previous, mutationResult.data.createUser]`? It's because the cache is normalised. If we didn't generate a reference using `cache.writeFragment`, the cache would end up looking like this:
+
+```
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        users: [{
+            __ref: 'User:2adb1120-d911-4196-ab1b-d5043cc7a00a'
+        }, {
+            __typename: 'User',
+            id: '9541f397-69ce-4abf-9275-9e80b5058853',
+            name: 'foobar
+        }]
+    },
+    'User:2adb1120-d911-4196-ab1b-d5043cc7a00a': {
+        __typename: 'User',
+        id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
+        name: 'mindnektar
+    }
+}
+```
+
+We would have a mix of normalised and non-normalised items in our users array, which would actually still work for the time being, but it would cause all kinds of trouble down the line, when trying to update the cache in the future. This happens to be one of the biggest gotchas in Apollo's cache management, because if you do it like this, you will likely not notice at first because no errors or warnings are thrown. You will only notice the aftereffects at a later point, when it will be difficult to figure out where the problem originally came from. So with emphasis: Always return refs in modifier functions, never the object itself.
+
+The method explained above is the one recommended by the [official documentation](https://www.apollographql.com/docs/react/data/mutations/#making-all-other-cache-updates), but there happens to be a simpler way (even without using `apollo-augmented-hooks`) that for some reason is not part of the `cache.modify` [documentation](https://www.apollographql.com/docs/react/api/cache/InMemoryCache/#modifier-function-api) but buried deep in an [unrelated section](https://www.apollographql.com/docs/react/caching/advanced-topics/#cache-redirects-using-field-policy-read-functions). This is how it works:
+
+```
+update: (cache, mutationResult) => {
+    cache.modify({
+        fields: {
+            users: (previous, { toReference }) => {
+                return [...previous, toReference(mutationResult.data.createUser)];
+            }
+        }
+    })
+}
+```
+
+The modifier function's second parameter includes an undocumented helper function called `toReference`, which essentially does the same thing as the entire `cache.writeFragment` block above. It's much easier to use and produces cleaner and more maintainable code. I am not aware of any reason to use `cache.writeFragment` in favour of this.
+
+Before we take a look at how this works with `apollo-augmented-hooks`, let's cover a slightly more complex example that you have to deal with all the time in real-world applications, but for which there exists no official solution at the time I'm writing this.
+
+Imagine our todos query was parameterised:
+
+```
+query todos($filter: TodoFilter!) {
+    todos(filter: $filter) {
+        id
+        title
+    }
+}
+```
+
+The `TodoFilter` might allow the user to specify a time interval so the server only responds with todos that were created in that interval:
+
+```
+import { gql, useQuery } from '@apollo/client';
+
+const mutation = gql`
+    query todos($filter: TodoFilter!) {
+        todos(filter: $filter) {
+            id
+            title
+        }
+    }
+`;
+
+export default () => (
+    useQuery(query, {
+        variables: {
+            filter: {
+                from: '2021-04-01',
+                to: '2021-04-30'
+            }
+        }
+    })
+)
+```
+
+Now what would the cache look like if we fired off such a query, possibly multiple times with different filters?
+
+```
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        'todos({"filter":{"from":"2021-04-01","to":"2021-04-30"}})': [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }, {
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }],
+        'todos({"filter":{"from":"2021-05-01","to":"2021-05-31"}})': [],
+        'todos({"filter":{"from":"2021-04-01","to":"2021-05-31"}})': [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }, {
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }]
+    },
+    'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8': {
+        __typename: 'Todo',
+        id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
+        title: 'Buy groceries'
+    },
+    'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1': {
+        __typename: 'Todo',
+        id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
+        title: 'Do the dishes'
+    }
+}
+```
+
+Depending on how many possible permutations there are for the filter, the root query might fill up quickly with lots of different items for the same query. Each different set of filters produces an additional cache item. So what happens if we create a new todo and update the cache using `cache.modify` like we did before?
+
+```
+update: (cache, mutationResult) => {
+    cache.modify({
+        fields: {
+            todos: (previous, { toReference }) => {
+                return [...previous, toReference(mutationResult.data.createTodo)];
+            }
+        }
+    })
+}
+```
+
+If we specifiy the `todos` field, the modifier function will be called once for every single cache item that was created with the todos query. The result is straightforward: Our new todo will be added to each cache item, no matter if it matches the parameters or not. This means that we may now have incorrect data in the cache. What we need to do instead is check if the new todo should be added to the cache item in each call of the modifier function.
+
+Unfortunately, Apollo doesn't provide a convenient way to tell what the parameters for the current modifier function call are. The only thing we get is the `storeFieldName` helper. It contains the full name of the `todos` field we're currently handling, so e.g. `todos({"filter":{"from":"2021-04-01","to":"2021-04-30"}})`. So the filter parameters are there, but it is on you to extract the data from the string so you can do your checks, possibly like this:
+
+```
+update: (cache, mutationResult) => {
+    cache.modify({
+        fields: {
+            todos: (previous, { toReference, storeFieldName }) => {
+                const jsonParameters = storeFieldName.substring(
+                    storeFieldName.indexOf('{'),
+                    storeFieldName.lastIndexOf('}') + 1
+                );
+                const parameters = JSON.parse(jsonParameters);
+
+                if (...) {
+                    return [...previous, toReference(mutationResult.data.createTodo)];
+                }
+
+                return previous;
+            }
+        }
+    })
+}
+```
+
+While this is already annoying enough, there are some cases in which the parameterised cache keys are formatted like this instead: `todos:{"filter":{"from":"2021-04-01","to":"2021-04-30"}}`, so you'll have to handle those cases as well. All of these things are not mentioned in the official documentation, so you'll have to stumble across them yourself or one of the [many](https://github.com/apollographql/react-apollo/issues/708) [years-spanning](https://github.com/apollographql/apollo-client/issues/1697) [github](https://github.com/apollographql/apollo-client/issues/2991) [issues](https://github.com/apollographql/apollo-client/issues/1546) where people are endlessly discussing this. That's why this is one of the issues that `apollo-augmented-hooks` seeks to solve.
+
+## So how do I add something to the cache using apollo-augmented-hooks?
