@@ -15,13 +15,13 @@ In order to correctly handle cache updates, it's important to understand the cac
 
 The `InMemoryCache`'s structure is a simple normalised object. When the cache is empty, it is an empty object:
 
-```
+```javascript
 {}
 ```
 
 Now imagine we're requesting the following query from the server:
 
-```
+```graphql
 query {
     todos {
         id
@@ -32,7 +32,7 @@ query {
 
 The server responds with two todos:
 
-```
+```javascript
 {
     data: {
         todos: [{
@@ -48,7 +48,7 @@ The server responds with two todos:
 
 Without any further action on your part, `ApolloClient` will update the cache so that it looks like this:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -75,7 +75,7 @@ Let's unpack this. The cache object now has an element with the key `ROOT_QUERY`
 
 This happens with arbitrarily deep queries. Imagine we're requesting the following query:
 
-```
+```graphql
 query {
     todos {
         id
@@ -90,7 +90,7 @@ query {
 
 The server response might look like this:
 
-```
+```javascript
 {
     data: {
         todos: [{
@@ -114,7 +114,7 @@ The server response might look like this:
 
 Because the cache is normalised, it will now look like this:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -156,7 +156,7 @@ This behaviour has one great advantage: Whenever a cache item is updated (e.g. b
 
 The cache item won't be normalised. An example query:
 
-```
+```graphql
 query {
     todos {
         id
@@ -170,7 +170,7 @@ query {
 
 The server response:
 
-```
+```javascript
 {
     data: {
         todos: [{
@@ -192,7 +192,7 @@ The server response:
 
 And the cache:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -227,7 +227,7 @@ Let me reiterate: Always include an id for each requested field.
 
 Of course, sometimes an id might not be available because that particular type is identified differently, either by another name or by a combination of fields:
 
-```
+```graphql
 query {
     users {
         name
@@ -238,7 +238,7 @@ query {
 
 Maybe users have no id and are instead identified by their combination of name and email. Luckily, you can very easily specify these exceptions in your `InMemoryCache` [configuration](https://www.apollographql.com/docs/react/caching/cache-configuration/#customizing-identifier-generation-by-type). This is what the cache might look like:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -264,7 +264,7 @@ The vast majority of cache updates that you want to do are one of these three th
 
 Conveniently, `ApolloClient` automatically takes care of point 1 for us. Imagine the cache looks like this:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -283,7 +283,7 @@ Conveniently, `ApolloClient` automatically takes care of point 1 for us. Imagine
 
 Now the user calls a mutation that changes his email address:
 
-```
+```graphql
 mutation {
     updateUserEmail(email: "mindnektar@example.com") {
         id
@@ -294,7 +294,7 @@ mutation {
 
 The server returns:
 
-```
+```javascript
 {
     data: {
         updateUserEmail: {
@@ -308,7 +308,7 @@ The server returns:
 
 Because we already have an item with the key `User:2adb1120-d911-4196-ab1b-d5043cc7a00a` in the cache, `ApolloClient` knows to automatically update it with the data returned by the mutation:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -333,7 +333,7 @@ When it comes to adding or deleting cache items however, `ApolloClient` can't po
 
 Keeping with the example above, our cache initially looks like this:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -351,7 +351,7 @@ Keeping with the example above, our cache initially looks like this:
 
 Now we create a new user with this mutation:
 
-```
+```graphql
 mutation {
     createUser(name: "foobar") {
         id
@@ -362,7 +362,7 @@ mutation {
 
 The server returns:
 
-```
+```javascript
 {
     data: {
         createUser: {
@@ -376,7 +376,7 @@ The server returns:
 
 The cache does not include a user with this id, so no automatic updates are performed. Let's take a look at the mutation hook:
 
-```
+```javascript
 import { gql, useMutation } from '@apollo/client';
 
 const mutation = gql`
@@ -407,7 +407,7 @@ Remembering the shape of the normalised cache object, each key references either
 
 `fields` is a bit more complex. It is an object that allows you to specify how each field of the chosen cache item should be modified. In our example above, we are creating a new user, so it stands to reason that we would like to add it to our list of users in the cache. This can be done the following way:
 
-```
+```javascript
 update: (cache, mutationResult) => {
     cache.modify({
         fields: {
@@ -433,7 +433,7 @@ As you can see, even in this very simple example, the cache modification is rath
 
 Now the question is, why do we have to do all that `cache.writeFragment` stuff rather than just return `[...previous, mutationResult.data.createUser]`? It's because the cache is normalised. If we didn't generate a reference using `cache.writeFragment`, the cache would end up looking like this:
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -457,7 +457,7 @@ We would have a mix of normalised and non-normalised items in our users array, w
 
 The method explained above is the one recommended by the [official documentation](https://www.apollographql.com/docs/react/data/mutations/#making-all-other-cache-updates), but there happens to be a simpler way (even without using `apollo-augmented-hooks`) that for some reason is not part of the `cache.modify` [documentation](https://www.apollographql.com/docs/react/api/cache/InMemoryCache/#modifier-function-api) but buried deep in an [unrelated section](https://www.apollographql.com/docs/react/caching/advanced-topics/#cache-redirects-using-field-policy-read-functions). This is how it works:
 
-```
+```javascript
 update: (cache, mutationResult) => {
     cache.modify({
         fields: {
@@ -475,7 +475,7 @@ Before we take a look at how this works with `apollo-augmented-hooks`, let's cov
 
 Imagine our todos query was parameterised:
 
-```
+```graphql
 query todos($filter: TodoFilter!) {
     todos(filter: $filter) {
         id
@@ -486,7 +486,7 @@ query todos($filter: TodoFilter!) {
 
 The `TodoFilter` might allow the user to specify a time interval so the server only responds with todos that were created in that interval:
 
-```
+```javascript
 import { gql, useQuery } from '@apollo/client';
 
 const mutation = gql`
@@ -512,7 +512,7 @@ export default () => (
 
 Now what would the cache look like if we fired off such a query, possibly multiple times with different filters?
 
-```
+```javascript
 {
     ROOT_QUERY: {
         __typename: 'Query',
@@ -543,7 +543,7 @@ Now what would the cache look like if we fired off such a query, possibly multip
 
 Depending on how many possible permutations there are for the filter, the root query might fill up quickly with lots of different items for the same query. Each different set of filters produces an additional cache item. So what happens if we create a new todo and update the cache using `cache.modify` like we did before?
 
-```
+```javascript
 update: (cache, mutationResult) => {
     cache.modify({
         fields: {
