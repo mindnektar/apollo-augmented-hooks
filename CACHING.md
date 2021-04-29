@@ -559,7 +559,7 @@ If we specifiy the `todos` field, the modifier function will be called once for 
 
 Unfortunately, Apollo doesn't provide a convenient way to tell what the parameters for the current modifier function call are. The only thing we get is the `storeFieldName` helper. It contains the full name of the `todos` field we're currently handling, so e.g. `todos({"filter":{"from":"2021-04-01","to":"2021-04-30"}})`. So while the filter parameters can be accessed, it is on you to extract the data from the string so you can do your checks, possibly like this:
 
-```
+```javascript
 update: (cache, mutationResult) => {
     cache.modify({
         fields: {
