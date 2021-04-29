@@ -97,15 +97,15 @@ The server response might look like this:
             id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
             title: 'Buy groceries',
             user: {
-                id: '2adb1120-d911-4196-ab1b-d5043cc7a00a'
-                name: 'mindnektar
+                id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
+                name: 'mindnektar'
             }
         }, {
             id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
             title: 'Do the dishes',
             user: {
-                id: '2adb1120-d911-4196-ab1b-d5043cc7a00a'
-                name: 'mindnektar
+                id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
+                name: 'mindnektar'
             }
         }]
     }
@@ -143,7 +143,7 @@ Because the cache is normalised, it will now look like this:
     'User:2adb1120-d911-4196-ab1b-d5043cc7a00a': {
         __typename: 'User',
         id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
-        name: 'mindnektar
+        name: 'mindnektar'
     }
 }
 ```
@@ -177,13 +177,13 @@ The server response:
             id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
             title: 'Buy groceries',
             user: {
-                name: 'mindnektar
+                name: 'mindnektar'
             }
         }, {
             id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
             title: 'Do the dishes',
             user: {
-                name: 'mindnektar
+                name: 'mindnektar'
             }
         }]
     }
@@ -207,7 +207,7 @@ And the cache:
         id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
         title: 'Buy groceries',
         user: {
-            name: 'mindnektar
+            name: 'mindnektar'
         }
     },
     'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1': {
@@ -215,7 +215,7 @@ And the cache:
         id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
         title: 'Do the dishes',
         user: {
-            name: 'mindnektar
+            name: 'mindnektar'
         }
     }
 }
@@ -248,7 +248,7 @@ Maybe users have no id and are instead identified by their combination of name a
     },
     'User:{"name":"mindnektar","email":"user@example.com"}': {
         __typename: 'User',
-        name: 'mindnektar,
+        name: 'mindnektar',
         email: 'user@example.com'
     }
 }
@@ -275,7 +275,7 @@ Conveniently, `ApolloClient` automatically takes care of point 1 for us. Imagine
     'User:2adb1120-d911-4196-ab1b-d5043cc7a00a': {
         __typename: 'User',
         id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
-        name: 'mindnektar,
+        name: 'mindnektar',
         email: 'test@example.com'
     }
 }
@@ -319,7 +319,7 @@ Because we already have an item with the key `User:2adb1120-d911-4196-ab1b-d5043
     'User:2adb1120-d911-4196-ab1b-d5043cc7a00a': {
         __typename: 'User',
         id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
-        name: 'mindnektar,
+        name: 'mindnektar',
         email: 'mindnektar@example.com'
     }
 }
@@ -344,7 +344,7 @@ Keeping with the example above, our cache initially looks like this:
     'User:2adb1120-d911-4196-ab1b-d5043cc7a00a': {
         __typename: 'User',
         id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
-        name: 'mindnektar
+        name: 'mindnektar'
     }
 }
 ```
@@ -442,13 +442,13 @@ Now the question is, why do we have to do all that `cache.writeFragment` stuff r
         }, {
             __typename: 'User',
             id: '9541f397-69ce-4abf-9275-9e80b5058853',
-            name: 'foobar
+            name: 'foobar'
         }]
     },
     'User:2adb1120-d911-4196-ab1b-d5043cc7a00a': {
         __typename: 'User',
         id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
-        name: 'mindnektar
+        name: 'mindnektar'
     }
 }
 ```
