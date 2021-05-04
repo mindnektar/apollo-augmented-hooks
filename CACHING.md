@@ -397,7 +397,7 @@ export default () => {
                 // TODO: Update cache here
             }
         })
-    )
+    );
 }
 ```
 
@@ -425,7 +425,7 @@ update: (cache, mutationResult) => {
                 return [...previous, newUserRef];
             }
         }
-    })
+    });
 }
 ```
 
@@ -465,7 +465,7 @@ update: (cache, mutationResult) => {
                 return [...previous, toReference(mutationResult.data.createUser)];
             }
         }
-    })
+    });
 }
 ```
 
@@ -489,7 +489,7 @@ The `TodoFilter` might allow the user to specify a time interval so the server o
 ```javascript
 import { gql, useQuery } from '@apollo/client';
 
-const mutation = gql`
+const query = gql`
     query todos($filter: TodoFilter!) {
         todos(filter: $filter) {
             id
@@ -507,7 +507,7 @@ export default () => (
             }
         }
     })
-)
+);
 ```
 
 Now what would the cache look like if we fired off such a query, possibly multiple times with different filters?
@@ -551,7 +551,7 @@ update: (cache, mutationResult) => {
                 return [...previous, toReference(mutationResult.data.createTodo)];
             }
         }
-    })
+    });
 }
 ```
 
@@ -564,23 +564,80 @@ update: (cache, mutationResult) => {
     cache.modify({
         fields: {
             todos: (previous, { toReference, storeFieldName }) => {
-                const jsonParameters = storeFieldName.substring(
+                const jsonVariables = storeFieldName.substring(
                     storeFieldName.indexOf('{'),
                     storeFieldName.lastIndexOf('}') + 1
                 );
-                const parameters = JSON.parse(jsonParameters);
+                const variables = JSON.parse(jsonVariables);
+                const now = new Date();
+                const from = new Date(variables.filter.from);
+                const to = new Date(variables.filter.to);
 
-                if (...) {
+                if (now >= from && now <= to) {
                     return [...previous, toReference(mutationResult.data.createTodo)];
                 }
 
                 return previous;
             }
         }
-    })
+    });
 }
 ```
 
 Though this is already annoying enough, there are some cases in which the parameterised cache keys are formatted like this instead: `todos:{"filter":{"from":"2021-04-01","to":"2021-04-30"}}`, so you'll have to handle those cases as well. All of these things are not mentioned in the official documentation, so you'll have to stumble across them yourself or one of the [many](https://github.com/apollographql/react-apollo/issues/708) [years-spanning](https://github.com/apollographql/apollo-client/issues/1697) [github](https://github.com/apollographql/apollo-client/issues/2991) [issues](https://github.com/apollographql/apollo-client/issues/1546) where people are endlessly discussing this. That's why this is one of the issues that `apollo-augmented-hooks` seeks to solve.
 
 ## So how do I add something to the cache using apollo-augmented-hooks?
+
+Pretty similarly to the official way, but there are some key differences:
+
+```javascript
+import { useMutation } from 'apollo-augmented-hooks';
+
+const mutation = `
+    mutation {
+        createUser(name: "foobar") {
+            id
+            name
+        }
+    }
+`;
+
+export default () => {
+    const mutate = useMutation(mutation);
+
+    return () => (
+        mutate({
+            modifiers: [
+                // TODO: Update cache here
+            ]
+        })
+    );
+}
+```
+
+1. We import `useMutation` from `apollo-augmented-hooks`, not from `@apollo/client`.
+1. We don't need `gql` to transform the graphql string into an abstract syntax tree - this is done internally by `useMutation`.
+1. `useMutation` doesn't return a tuple, the first element of which is the mutate function - instead, it only returns the mutate function (so you can omit the brackets).
+1. Rather than passing an `update` function to the mutate call, you pass a `modifiers` array.
+
+Let's take a look at how we can modify the cache in our example using the `modifiers` array.
+
+```javascript
+modifiers: [{
+    fields: {
+        todos: ({ includeIf, variables }) => {
+            const now = new Date();
+            const from = new Date(variables.filter.from);
+            const to = new Date(variables.filter.to);
+
+            return includeIf(now >= from && now <= to);
+        }
+    }
+}]
+```
+
+`modifiers` is an array of objects, each of which will result in one call of `cache.modify`. The main difference is the signature of the modifier function. Originally, the first parameter was the previous cache content and the second parameter an object containing a bunch of helpers. The new signature includes only that helper object, because often you don't even need the previous cache content. If you do, you can access it on the helper object, with the `previous` key.
+
+In our example, we don't need it because we make use of the `includeIf` helper instead. `includeIf` is a convenience function used for updating arrays in the cache - it returns the previous cache content, either with the server response included with it or removed from it, depending on whether the passed parameter is truthy or falsy. Additionally, we can use the `variables` helper, which contains the query variables for each cache item that we're updating, saving us the trouble of manually parsing `storeFieldName`.
+
+Aside from `previous`, `variables`, `includeIf` and all the other [official helpers](https://www.apollographql.com/docs/react/api/cache/InMemoryCache/#modifier-function-api), the helper object also includes `item` (which is a less verbose way to access the server response than `mutationResult.data.createTodo`) and `itemRef`, which is synonymous with `toReference(item)`.
