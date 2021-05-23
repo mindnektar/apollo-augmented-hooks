@@ -36,9 +36,11 @@ The server responds with two todos:
 {
     data: {
         todos: [{
+            __typename: 'Todo',
             id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
             title: 'Buy groceries'
         }, {
+            __typename: 'Todo',
             id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
             title: 'Do the dishes'
         }]
@@ -94,16 +96,20 @@ The server response might look like this:
 {
     data: {
         todos: [{
+            __typename: 'Todo',
             id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
             title: 'Buy groceries',
             user: {
+                __typename: 'User',
                 id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
                 name: 'mindnektar'
             }
         }, {
+            __typename: 'Todo',
             id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
             title: 'Do the dishes',
             user: {
+                __typename: 'User',
                 id: '2adb1120-d911-4196-ab1b-d5043cc7a00a',
                 name: 'mindnektar'
             }
@@ -174,15 +180,19 @@ The server response:
 {
     data: {
         todos: [{
+            __typename: 'Todo',
             id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
             title: 'Buy groceries',
             user: {
+                __typename: 'User',
                 name: 'mindnektar'
             }
         }, {
+            __typename: 'Todo',
             id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
             title: 'Do the dishes',
             user: {
+                __typename: 'User',
                 name: 'mindnektar'
             }
         }]
