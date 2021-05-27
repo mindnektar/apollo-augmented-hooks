@@ -495,9 +495,9 @@ The method explained above is the one recommended by the [official documentation
 update: (cache, mutationResult) => {
     cache.modify({
         fields: {
-            users: (previous, { toReference }) => {
-                return [...previous, toReference(mutationResult.data.createUser)];
-            }
+            users: (previous, { toReference }) => (
+                [...previous, toReference(mutationResult.data.createUser)]
+            )
         }
     });
 }
@@ -581,9 +581,9 @@ Depending on how many possible permutations there are for the filter, the root q
 update: (cache, mutationResult) => {
     cache.modify({
         fields: {
-            todos: (previous, { toReference }) => {
-                return [...previous, toReference(mutationResult.data.createTodo)];
-            }
+            todos: (previous, { toReference }) => (
+                [...previous, toReference(mutationResult.data.createTodo)]
+            )
         }
     });
 }
@@ -738,9 +738,9 @@ update: (cache, mutationResult) => {
     cache.modify({
         id: 'User:141738bf-3622-4beb-b0c5-0622e1e7311f',
         fields: {
-            todos: (previous, { toReference }) => {
-                return [...previous, toReference(mutationResult.data.createTodo)];
-            }
+            todos: (previous, { toReference }) => (
+                [...previous, toReference(mutationResult.data.createTodo)]
+            )
         }
     });
 }
@@ -770,9 +770,9 @@ export default (user) => {
                 cache.modify({
                     id: `${user.__typename}:${user.id}`,
                     fields: {
-                        todos: (previous, { toReference }) => {
-                            return [...previous, toReference(mutationResult.data.createTodo)];
-                        }
+                        todos: (previous, { toReference }) => (
+                            [...previous, toReference(mutationResult.data.createTodo)]
+                        )
                     }
                 });
             }
@@ -788,9 +788,9 @@ update: (cache, mutationResult) => {
     cache.modify({
         id: cache.identify(user),
         fields: {
-            todos: (previous, { toReference }) => {
-                return [...previous, toReference(mutationResult.data.createTodo)];
-            }
+            todos: (previous, { toReference }) => (
+                [...previous, toReference(mutationResult.data.createTodo)]
+            )
         }
     });
 }
@@ -798,7 +798,7 @@ update: (cache, mutationResult) => {
 
 `cache.identify` transforms an object containing `__typename` and the respective key fields to generate the cache key for us.
 
-With `apollo-augmented-hooks`, you provide a `cacheObject` prop rather than `id`. `cache.identify` is done internally.
+With `apollo-augmented-hooks`, you simply provide a `cacheObject` prop rather than `id`. `cache.identify` is done internally.
 
 ```javascript
 modifiers: [{
@@ -810,3 +810,117 @@ modifiers: [{
     }
 }]
 ```
+
+## How do I delete something from the cache?
+
+There are a couple of ways, depending on what needs to be deleted. One of the most common use cases is removing an item from a list. Here's our example cache:
+
+```javascript
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        'todos': [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }, {
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }]
+    },
+    'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8': {
+        __typename: 'Todo',
+        id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
+        title: 'Buy groceries'
+    },
+    'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1': {
+        __typename: 'Todo',
+        id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
+        title: 'Do the dishes'
+    }
+}
+```
+
+The mutation to delete a todo might look like this:
+
+```graphql
+mutation {
+    deleteTodo(id: "36bad921-8fcf-4f33-9f29-0d3cd70205c8") {
+        id
+    }
+}
+```
+
+And this is how we would remove the todo after the mutation the Apollo way:
+
+```javascript
+update: (cache, mutationResult) => {
+    cache.modify({
+        fields: {
+            todos: (previous, { readField }) => (
+                previous.filter((ref) => (
+                    readField('id', ref) !== mutationResult.data.deleteTodo.id
+                ))
+            )
+        }
+    });
+}
+```
+
+Just like when adding a todo, we modify the `todos` field by returning a new array - but this time, we need to filter the todo returned by the server from the list rather than append it. The problem is that each item in the `todos` array is not the actual todo in the cache, but the reference object (e.g. `{ __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8' }`), so we can't just that for the comparison with the mutation result's id. Instead, we can use the `readField` helper to get the `id` field from the actual cache item.
+
+With `apollo-augmented-hooks`, we can simply use the `includeIf` helper again, which does the same thing internally:
+
+```javascript
+modifiers: [{
+    fields: {
+        todos: ({ includeIf }) => (
+            includeIf(false)
+        )
+    }
+}]
+```
+
+In either case, the cache will look like this:
+
+```javascript
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        'todos': [{
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }]
+    },
+    'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8': {
+        __typename: 'Todo',
+        id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
+        title: 'Buy groceries'
+    },
+    'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1': {
+        __typename: 'Todo',
+        id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
+        title: 'Do the dishes'
+    }
+}
+```
+
+The reference is no longer in the `todos` item, but the cache item is still there. This is not an inherently terrible thing, but it is always better to keep the cache as clean as possible, and it will also benefit performance. One way is to call `cache.gc()`, which will garbage-collect all cache items that are not referenced anywhere else in the cache. Another is cache eviction:
+
+```javascript
+update: (cache, mutationResult) => {
+    cache.evict({
+        id: cache.identify(mutationResult.data.deleteTodo)
+    });
+    cache.gc();
+}
+```
+
+Calling `cache.evict` will remove the specified item from the cache, and it also removes all references to it from any array in the cache. It is recommended to do a `cache.gc` afterwards anyway, because evicting the cache item might cause other cache items to no longer be referenced. See [this very helpful section](https://www.apollographql.com/docs/react/caching/garbage-collection/#cacheevict) in the official documentation for more info on what happens under the hood when using cache eviction.
+
+The `modifiers` option in `apollo-augmented-hooks` also includes a convenient way to do the above:
+
+```javascript
+modifiers: [{
+    cacheObject: (item) => item,
+    evict: true,
+}]
+```
+
+Since we don't have access to the mutation result in the modifiers array, `cacheObject` allows passing a function rather than the required cache object itself. That function's only parameter is synonymous with `mutationResult.data.deleteTodo`, so since that is exactly what we want to evict, we can simply return it here.
