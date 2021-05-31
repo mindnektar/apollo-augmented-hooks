@@ -3,6 +3,7 @@ import { gql, useQuery } from '@apollo/client';
 import { makeReducedQueryAst } from './helpers/reducedQueries';
 import { getVariablesWithPagination, handleNextPage } from './helpers/pagination';
 import { registerRequest, deregisterRequest } from './helpers/inFlightTracking';
+import inflateCacheData from './helpers/inflateCacheData';
 import apolloClient from './apolloClient';
 import { useGlobalContext } from './globalContextHook';
 
@@ -110,7 +111,9 @@ export default (query, options = {}) => {
     return {
         ...reducedResult,
         nextPage: handleNextPage(queryAst, cacheDataRef, reducedResult, options.pagination),
-        data: cacheResult.data,
+        // This option makes sure that every requested field always contains the entire cache item, and
+        // not just the requested sub selection.
+        data: options.inflateCacheData !== false ? inflateCacheData(client.cache, cacheResult.data) : cacheResult.data,
         // XXX: Make the loading state dependent on the presence of data in the cache query result.
         // This is a workaround for https://github.com/apollographql/react-apollo/issues/2601
         loading: !options.skip && !cacheResult.data,

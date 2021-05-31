@@ -31,6 +31,8 @@ export default (...results) => ({
     error: merge.all(
         // Here we stick to deepmerge's default behaviour of concatenating arrays so we don't lose
         // any error messages if more than one of the combined queries happen to throw an error.
-        results.map(({ error }) => error || {})
+        results.reduce((result, { error }) => (
+            error ? [...result, error] : result
+        ), [])
     ),
 });

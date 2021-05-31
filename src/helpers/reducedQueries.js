@@ -1,4 +1,5 @@
 import stringify from 'json-stable-stringify';
+import { getKeyFields } from './keyFields';
 
 const buildFieldName = (selection, variables) => {
     if (!selection.arguments?.length) {
@@ -167,21 +168,6 @@ const hasVariable = (selectionSet, variable) => (
         return isVariableInArguments || isVariableInDirectives || isVariableInSelectionSet;
     })
 );
-
-const getKeyFields = (cache) => {
-    const typePolicies = Object.entries(cache.config.typePolicies);
-
-    return typePolicies.reduce((result, [typename, { keyFields }]) => {
-        if (!keyFields) {
-            return result;
-        }
-
-        return {
-            ...result,
-            [typename]: keyFields,
-        };
-    }, {});
-};
 
 export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const cacheContents = cache.extract();
