@@ -104,11 +104,6 @@ export default (query, options = {}) => {
         fetchPolicy: 'cache-only',
     });
 
-    // Store cache result in ref so its contents remain fresh when calling `nextPage`.
-    useEffect(() => {
-        cacheDataRef.current = inflatedCacheData;
-    }, [!!inflatedCacheData]);
-
     useEffect(() => {
         if (cacheResult.data) {
             setInflatedCacheData(
@@ -119,6 +114,9 @@ export default (query, options = {}) => {
                     : cacheResult.data
             );
         }
+
+        // Store cache result in ref so its contents remain fresh when calling `nextPage`.
+        cacheDataRef.current = cacheResult.data;
     }, [JSON.stringify(cacheResult.data)]);
 
     return {
