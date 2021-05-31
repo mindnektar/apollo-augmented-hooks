@@ -23,6 +23,7 @@ export default (query, options = {}) => {
     const queryAst = gql(query);
     const variables = getVariablesWithPagination(options);
     const globalContext = useGlobalContext();
+    const [inflatedCacheData, setInflatedCacheData] = useState(null);
 
     // Functional default state to avoid recomputing the reduced query on each render.
     const [reducedQueryAst, setReducedQueryAst] = useState(() => (
@@ -105,17 +106,27 @@ export default (query, options = {}) => {
 
     // Store cache result in ref so its contents remain fresh when calling `nextPage`.
     useEffect(() => {
-        cacheDataRef.current = cacheResult.data;
-    }, [cacheResult?.data]);
+        cacheDataRef.current = inflatedCacheData;
+    }, [!!inflatedCacheData]);
+
+    useEffect(() => {
+        if (cacheResult.data) {
+            setInflatedCacheData(
+                options.inflateCacheData !== false
+                    // This makes sure that every requested field always contains the entire cache item, and
+                    // not just the requested sub selection.
+                    ? inflateCacheData(client.cache, cacheResult.data)
+                    : cacheResult.data
+            );
+        }
+    }, [JSON.stringify(cacheResult.data)]);
 
     return {
         ...reducedResult,
         nextPage: handleNextPage(queryAst, cacheDataRef, reducedResult, options.pagination),
-        // This option makes sure that every requested field always contains the entire cache item, and
-        // not just the requested sub selection.
-        data: options.inflateCacheData !== false ? inflateCacheData(client.cache, cacheResult.data) : cacheResult.data,
+        data: inflatedCacheData,
         // XXX: Make the loading state dependent on the presence of data in the cache query result.
         // This is a workaround for https://github.com/apollographql/react-apollo/issues/2601
-        loading: !options.skip && !cacheResult.data,
+        loading: !options.skip && !inflatedCacheData,
     };
 };
