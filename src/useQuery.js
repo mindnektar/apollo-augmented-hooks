@@ -17,6 +17,19 @@ const getQueryAst = (queryAst, client, options) => (
         : makeReducedQueryAst(client.cache, queryAst, options.variables)
 );
 
+const getFetchPolicy = (reducedQueryAst, options) => {
+    if (!reducedQueryAst) {
+        // If all the requested data is already in the cache, we can skip this query.
+        return 'cache-only';
+    }
+
+    // Always fetch data from the server on component mount when polling is enabled.
+    // Polling indicates that fresh data is more important than caching, so prefer an extra
+    // request on mount rather than waiting the duration of the poll interval for the first poll
+    // request.
+    return options.pollInterval ? 'cache-and-network' : options.fetchPolicy;
+};
+
 export default (query, options = {}) => {
     const cacheDataRef = useRef();
     const client = apolloClient();
@@ -47,11 +60,7 @@ export default (query, options = {}) => {
         // This toggles `loading` every time a polling request starts and completes. We need this
         // for the effect hook to work.
         notifyOnNetworkStatusChange: !!options.pollInterval,
-        // Always fetch data from the server on component mount when polling is enabled.
-        // Polling indicates that fresh data is more important than caching, so prefer an extra
-        // request on mount rather than waiting the duration of the poll interval for the first poll
-        // request.
-        fetchPolicy: options.pollInterval ? 'cache-and-network' : options.fetchPolicy,
+        fetchPolicy: getFetchPolicy(reducedQueryAst, options),
         // This prevents polling queries to refetch data from the server each time the cache is
         // mutated.
         nextFetchPolicy: options.pollInterval ? 'cache-first' : options.nextFetchPolicy,
