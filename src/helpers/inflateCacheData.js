@@ -86,7 +86,7 @@ export default (cache, data) => {
         return data;
     }
 
-    const cacheContents = cache.extract();
+    const cacheContents = cache.extract(true);
 
     itemCache = {};
     leafCache = {};
