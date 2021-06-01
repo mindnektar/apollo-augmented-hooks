@@ -1,5 +1,8 @@
 import { keyFieldsForTypeName } from './keyFields';
 
+const itemCache = {};
+const leafCache = {};
+
 const getFieldName = (storeFieldName) => {
     const parensIndex = storeFieldName.indexOf('(');
 
@@ -16,27 +19,41 @@ const getFieldName = (storeFieldName) => {
     return storeFieldName;
 };
 
-const maybeInflate = (cache, cacheContents, item, path) => {
-    if (!item) {
-        return item;
-    }
-
-    const cacheItem = cacheContents[cache.identify(item)] || item;
-
-    return !cacheItem.__typename || !path.includes(cacheItem.__typename)
-        ? inflate(
-            cache,
-            cacheContents,
-            cacheItem,
-            cacheItem.__typename ? [...path, cacheItem.__typename] : path,
-        )
-        : {
+const buildLeaf = (cache, cacheItem, cacheKey) => {
+    if (!leafCache[cacheKey]) {
+        leafCache[cacheKey] = {
             ...keyFieldsForTypeName(cache, cacheItem.__typename).reduce((result, keyField) => ({
                 ...result,
                 [keyField]: cacheItem[keyField],
             }), {}),
             __typename: cacheItem.__typename,
         };
+    }
+
+    return leafCache[cacheKey];
+};
+
+const maybeInflate = (cache, cacheContents, item, path) => {
+    if (!item) {
+        return item;
+    }
+
+    const cacheKey = cache.identify(item);
+    const cacheItem = cacheContents[cacheKey] || item;
+
+    if (!cacheItem.__typename) {
+        return inflate(cache, cacheContents, cacheItem, path);
+    }
+
+    if (path.includes(cacheItem.__typename)) {
+        return buildLeaf(cache, cacheItem, cacheKey);
+    }
+
+    if (!itemCache[cacheKey]) {
+        itemCache[cacheKey] = inflate(cache, cacheContents, cacheItem, [...path, cacheItem.__typename]);
+    }
+
+    return itemCache[cacheKey];
 };
 
 const inflate = (cache, cacheContents, data, path) => (
