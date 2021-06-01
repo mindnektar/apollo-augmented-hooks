@@ -1,7 +1,7 @@
 import { keyFieldsForTypeName } from './keyFields';
 
-const itemCache = {};
-const leafCache = {};
+let itemCache;
+let leafCache;
 
 const getFieldName = (storeFieldName) => {
     const parensIndex = storeFieldName.indexOf('(');
@@ -87,6 +87,9 @@ export default (cache, data) => {
     }
 
     const cacheContents = cache.extract();
+
+    itemCache = {};
+    leafCache = {};
 
     return inflate(cache, cacheContents, data, []);
 };
