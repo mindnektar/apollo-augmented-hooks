@@ -39,15 +39,15 @@ initAugmentedHooks(client);
 
 `useQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterpart. Additionally, it supports the following new options:
 
-#### reducedQuery
+#### - reducedQuery
 
 Default: `true`. Set to `false` if you wish to disable the query reduction functionality. See [this guide on reduced queries](REDUCED_QUERIES.md) for more information.
 
-#### inflateCacheData
+#### - inflateCacheData
 
 Default: `true`. Set to `false` if you wish to disable the cache inflation functionality. See [this guide on cache inflation](CACHE_INFLATION.md) for more information.
 
-#### pagination
+#### - pagination
 
 *Experimental and WIP.*
 
@@ -55,7 +55,7 @@ Default: `true`. Set to `false` if you wish to disable the cache inflation funct
 
 `useMutation` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usemutation) counterpart. However, it does not return a tuple of the mutation function and the mutation result, but just the mutation function, since the result can easily be accessed from the mutation's resolved promise. Additionally, the mutation function supports the following new options:
 
-#### input
+#### - input
 
 `input` can be used in place of the `variables` option. If the mutation takes only a single argument, `input` allows the omission of that argument's name. This reduces a bit of overhead with APIs where that is true for the vast majority of mutations.
 
@@ -81,7 +81,7 @@ mutate({
 });
 ```
 
-#### optimisticResponse
+#### - optimisticResponse
 
 `optimisticResponse` is already available in the original `useMutation`, but it now provides a way to reduce some overhead. It automatically adds the attributes from the `input` object as well as the `__typename: 'Mutation'` part.
 
@@ -124,7 +124,7 @@ mutate({
 });
 ```
 
-#### modifiers
+#### - modifiers
 
 `modifiers` serves as a helper to make cache updates after a mutation as pain-free as possible. See [this guide on caching](CACHING.md) for a more detailed explanation. It accepts an array of modifier objects with the following properties:
 
@@ -142,23 +142,23 @@ If you pass neither `cacheObject` nor `typename`, the modifier will assume `ROOT
 
 This works the same as apollo's [cache.modify](https://www.apollographql.com/docs/react/caching/cache-interaction/#cachemodify), except that each field function gets passed only the `details` object. To make cache updating easier, the `details` object of each field function contains a few additional helpers:
 
-###### previous
+###### *previous*
 
 This is what used to be the field function's first parameter, the field's previous value. Since it is often not needed, it is now part of the `details` object and can simply be ignored.
 
-###### item
+###### *item*
 
 The data returned by your mutation.
 
-###### itemRef
+###### *itemRef*
 
 The ref object that you should return in your modifier function. Equivalent to `cache.toReference(item)`.
 
-###### variables
+###### *variables*
 
 The variables that were used to create the field that you are currently modifying. Its stringified form is already available on `details.storeFieldName`, but a proper variables object is missing in apollo's implementation.
 
-###### includeIf
+###### *includeIf*
 
 If the field you are modifying is an array, you can call `includeIf` with a boolean parameter saying whether or not the mutation result should be part of the array. If it is not already part of it but should be, it will be added; if it is already part of it but shouldn't be, it will be removed.
 
