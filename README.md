@@ -1,6 +1,14 @@
 # apollo-augmented-hooks
 
-Drop-in replacements for [@apollo/client](https://github.com/apollographql/apollo-client)'s `useQuery` and `useMutation` hooks with reduced overhead and additional functionality.
+Drop-in replacements for [@apollo/client](https://github.com/apollographql/apollo-client)'s `useQuery`, `useMutation` and `useSubscription` hooks with reduced overhead and additional functionality.
+
+## What problems does this package solve?
+
+- It attempts to make complex cache modification as painless as possible by providing additional helpers to `cache.modify` calls. See [this guide on caching](CACHING.md) for more information.
+- It improves performance by automatically reducing the size of queries sent to the server by stripping all the fields from them that are already in the cache.
+- It also improves performance by automatically adding all fields available in the cache to each requested selection, allowing for smaller queries to be written.
+- It allows you to globally provide context data for all queries and mutations using a hook.
+- It fixes a race condition causing cache updates with stale data when simultaneously performing mutations and poll requests.
 
 ## Installation
 
