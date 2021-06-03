@@ -45,7 +45,7 @@ Default: `true`. Set to `false` if you wish to disable the query reduction funct
 
 #### inflateCacheData
 
-Default: `true`. Set to `false` if you wish to disable the cache inflation functionality.
+Default: `true`. Set to `false` if you wish to disable the cache inflation functionality. See [this guide on cache inflation](CACHE_INFLATION.md) for more information.
 
 #### pagination
 
