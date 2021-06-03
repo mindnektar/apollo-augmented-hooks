@@ -5,7 +5,7 @@ Drop-in replacements for [@apollo/client](https://github.com/apollographql/apoll
 ## What problems does this package solve?
 
 - It attempts to make complex cache modification as painless as possible by providing additional helpers to `cache.modify` calls. See [this guide on caching](CACHING.md) for more information.
-- It improves performance by automatically reducing the size of queries sent to the server by stripping all the fields from them that are already in the cache.
+- It improves performance by automatically reducing the size of queries sent to the server by stripping all the fields from them that are already in the cache. See [this guide on reduced queries](REDUCED_QUERIES.md) for more information.
 - It also improves performance by automatically adding all fields available in the cache to each requested selection, allowing for smaller queries to be written.
 - It allows you to globally provide context data for all queries and mutations using a hook.
 - It fixes a race condition causing cache updates with stale data when simultaneously performing mutations and poll requests.
@@ -37,58 +37,15 @@ initAugmentedHooks(client);
 
 ### useQuery
 
-`useQuery` implements an algorithm that strips all fields from your query that are already present in the cache. So if e.g. the cache contains the following:
-
-```js
-{
-    ROOT_QUERY: {
-        things: [
-            { __ref: 'Thing:1' },
-            { __ref: 'Thing:2' }
-        ]
-    },
-    'Thing:1': {
-        id: 1,
-        name: 'some name',
-        description: 'some description'
-    },
-    'Thing:2': {
-        id: 2,
-        name: 'some other name',
-    }
-}
-```
-
-and your query looks like this:
-
-```
-query {
-    things {
-        id
-        name
-        description
-    }
-}
-```
-
-the actual query being sent to the server will look like this:
-
-```
-query {
-    things {
-        id
-        description
-    }
-}
-```
-
-This works arbitrarily deep and out of the box without any extra configuration. Depending on how often the same data is requested across your app's queries, this can severely reduce the server load and increase response time.
-
 `useQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterpart. Additionally, it supports the following new options:
 
 #### reducedQuery
 
-Default: `true`. Set to `false` if you wish to disable the above query reduction functionality.
+Default: `true`. Set to `false` if you wish to disable the query reduction functionality. See [this guide on reduced queries](REDUCED_QUERIES.md) for more information.
+
+#### inflateCacheData
+
+Default: `true`. Set to `false` if you wish to disable the cache inflation functionality.
 
 ### useMutation
 
