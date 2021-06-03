@@ -6,7 +6,7 @@ Drop-in replacements for [@apollo/client](https://github.com/apollographql/apoll
 
 - It attempts to make complex cache modification as painless as possible by providing additional helpers to `cache.modify` calls. See [this guide on caching](CACHING.md) for more information.
 - It improves performance by automatically reducing the size of queries sent to the server by stripping all the fields from them that are already in the cache. See [this guide on reduced queries](REDUCED_QUERIES.md) for more information.
-- It also improves performance by automatically adding all fields available in the cache to each requested selection, allowing for smaller queries to be written.
+- It also improves performance by automatically adding all fields available in the cache to each requested selection, allowing for smaller queries to be written. See [this guide on cache inflation](CACHE_INFLATION.md) for more information.
 - It allows you to globally provide context data for all queries and mutations using a hook.
 - It fixes a race condition causing cache updates with stale data when simultaneously performing mutations and poll requests.
 
@@ -46,6 +46,10 @@ Default: `true`. Set to `false` if you wish to disable the query reduction funct
 #### inflateCacheData
 
 Default: `true`. Set to `false` if you wish to disable the cache inflation functionality.
+
+#### pagination
+
+*Experimental and WIP.*
 
 ### useMutation
 
@@ -122,7 +126,7 @@ mutate({
 
 #### modifiers
 
-`modifiers` serves as a helper to make cache updates after a mutation as pain-free as possible. It accepts an array of modifier objects with the following properties:
+`modifiers` serves as a helper to make cache updates after a mutation as pain-free as possible. See [this guide on caching](CACHING.md) for a more detailed explanation. It accepts an array of modifier objects with the following properties:
 
 ##### cacheObject
 
@@ -157,10 +161,6 @@ The variables that were used to create the field that you are currently modifyin
 ###### includeIf
 
 If the field you are modifying is an array, you can call `includeIf` with a boolean parameter saying whether or not the mutation result should be part of the array. If it is not already part of it but should be, it will be added; if it is already part of it but shouldn't be, it will be removed.
-
-##### evict
-
-If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`. Use this if writing the cache update logic is impossible or too complicated. The deleted cache objects will be refetched the next time a query using them is rerendered. This should be used in place of [refetchQueries](https://www.apollographql.com/docs/react/caching/advanced-topics/#rerunning-queries-after-a-mutation) to avoid potentially bombarding the server with too many requests after a cache update. In combination with `useQuery`s reduced queries, this can be really powerful, because it causes only the invalidated fields to be refetched, not the entire query.
 
 Example:
 
@@ -202,7 +202,12 @@ mutate({
 });
 ```
 
+##### evict
+
+If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`.
+
 ## Contributing
+
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
@@ -220,4 +225,4 @@ npm test
 ```
 
 ## License
-[ISC](https://opensource.org/licenses/ISC)
+[MIT](https://opensource.org/licenses/MIT)
