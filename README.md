@@ -206,6 +206,31 @@ mutate({
 
 If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`.
 
+### useSubscription
+
+`useQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterpart. Additionally, it supports the following new options:
+
+#### - modifiers
+
+Works exactly the same as its [useMutation counterpart](#-modifiers);
+
+### combineResults
+
+If you have more than one instance of `useQuery` in your hook (e.g. one regular query and one query for polling), you can easily merge their results like this:
+
+```js
+export default () => {
+    const result = useQuery(...);
+    const pollResult = useQuery(...);
+
+    return combineResults(result, pollResult);
+};
+```
+
+### setGlobalContextHook
+
+*WIP*
+
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
