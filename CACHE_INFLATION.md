@@ -58,4 +58,4 @@ The problem is that each todo within `users` will only contain the `id` field, n
 
 Be careful, though: Cache inflation will of course only work if the respective items are actually in the cache. So if for some reason there are more todos within `users` as within the root `todos` query, those additional todos cannot be inflated.
 
-If you wish to disable this functionality, you can pass the `inflateCacheData` option to `useQuery`.
+If you wish to disable this functionality, you can pass the option `inflateCacheData: false` to `useQuery`.
