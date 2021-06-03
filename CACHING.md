@@ -9,6 +9,15 @@ By default, the results of all graphql requests made with `ApolloClient` are cac
 
 `ApolloClient` includes a caching interface called `ApolloCache` and one proprietary implementation called `InMemoryCache`. It's the most prominent cache implementation for `ApolloClient` and the one we're going to focus on, because it's the only one that `apollo-augmented-hooks` works with.
 
+## Table of contents
+
+- [What does the cache look like?](#what-does-the-cache-look-like)
+- [How do I update the cache after a mutation?](#how-do-i-update-the-cache-after-a-mutation)
+- [How do I add something to the cache?](#how-do-i-add-something-to-the-cache)
+- [How do I add something to the cache using apollo-augmented-hooks?](#how-do-i-add-something-to-the-cache-using-apollo-augmented-hooks)
+- [How do I update a specific cache item rather than the root query?](#how-do-i-update-a-specific-cache-item-rather-than-the-root-query)
+- [How do I delete something from the cache?](#how-do-i-delete-something-from-the-cache)
+
 ## What does the cache look like?
 
 In order to correctly handle cache updates, it's important to understand the cache's structure. A little tip before we dive into it: For debugging purposes, you can use the [Apollo Client Devtools Chrome Extension](https://chrome.google.com/webstore/detail/apollo-client-devtools/jdkknkkbebbapilgoeccciglkfbmbnfm). Its most useful feature is that it allows you to inspect the current cache contents at any time.
@@ -158,9 +167,7 @@ The `ROOT_QUERY` looks exactly like before, and each todo contains a reference t
 
 This behaviour has one great advantage: Whenever a cache item is updated (e.g. because the user's name has changed), the entire cache object (with possibly hundreds or thousands of items) doesn't have to be traversed in search for instances of that user, but only a single item needs to be taken care of.
 
-## What if I am requesting a field that doesn't have an id?
-
-The cache item won't be normalised. An example query:
+What happens if we request a field that doesn't have an id, though? Then the cache item won't be normalised. An example query:
 
 ```graphql
 query {
@@ -620,7 +627,7 @@ update: (cache, mutationResult) => {
 
 Though this is already annoying enough, there are some cases in which the parameterised cache keys are formatted like this instead: `todos:{"filter":{"from":"2021-04-01","to":"2021-04-30"}}`, so you'll have to handle those cases as well. All of these things are not mentioned in the official documentation, so you'll have to stumble across them yourself or one of the [many](https://github.com/apollographql/react-apollo/issues/708) [years-spanning](https://github.com/apollographql/apollo-client/issues/1697) [github](https://github.com/apollographql/apollo-client/issues/2991) [issues](https://github.com/apollographql/apollo-client/issues/1546) where people are endlessly discussing this. This is one of the main problems that `apollo-augmented-hooks` seeks to solve.
 
-## So how do I add something to the cache using apollo-augmented-hooks?
+## How do I add something to the cache using apollo-augmented-hooks?
 
 Pretty similarly to the official way, but there are some key differences:
 
@@ -677,7 +684,7 @@ In our example, we don't need it because we make use of the `includeIf` helper i
 
 Aside from `previous`, `variables`, `includeIf` and all the other [official helpers](https://www.apollographql.com/docs/react/api/cache/InMemoryCache/#modifier-function-api), the helper object also includes `item` (which is a less verbose way to access the server response than `mutationResult.data.createTodo`) and `itemRef`, which is synonymous with `toReference(item)`.
 
-## What if I need to update a specific cache item rather than the root query?
+## How do I update a specific cache item rather than the root query?
 
 For this use case, let's start with this cache:
 
