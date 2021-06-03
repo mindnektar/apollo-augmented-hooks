@@ -69,7 +69,7 @@ query {
         id
         friends {
             id
-            email # The only additional field
+            email
         }
     }
 }
