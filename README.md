@@ -61,6 +61,8 @@ Default: `true`. Set to `false` if you wish to disable the cache inflation funct
 
 Example:
 
+*With @apollo/client*
+
 ```js
 mutate({
     variables: {
@@ -71,7 +73,7 @@ mutate({
 });
 ```
 
-is equivalent to
+*With apollo-augmented-hooks*
 
 ```js
 mutate({
@@ -86,6 +88,8 @@ mutate({
 `optimisticResponse` is already available in the original `useMutation`, but it now provides a way to reduce some overhead. It automatically adds the attributes from the `input` object as well as the `__typename: 'Mutation'` part.
 
 Example:
+
+*With @apollo/client*
 
 ```js
 const input = {
@@ -107,7 +111,7 @@ mutate({
 });
 ```
 
-is equivalent to:
+*With apollo-augmented-hooks*
 
 ```js
 const input = {
@@ -164,6 +168,8 @@ If the field you are modifying is an array, you can call `includeIf` with a bool
 
 Example:
 
+*With @apollo/client*
+
 ```js
 mutate({
     input: someInput,
@@ -186,7 +192,7 @@ mutate({
 });
 ```
 
-is equivalent to:
+*With apollo-augmented-hooks*
 
 ```js
 mutate({
