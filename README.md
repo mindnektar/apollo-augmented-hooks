@@ -98,7 +98,9 @@ const input = {
 };
 
 mutate({
-    input,
+    variables: {
+        input
+    },
     optimisticResponse: {
         __typename: 'Mutation',
         createThing: {
@@ -172,7 +174,9 @@ Example:
 
 ```js
 mutate({
-    input: someInput,
+    variables: {
+        input: someInput
+    },
     update: (cache, result) => {
         cache.modify({
             id: cache.identify(someObject),
