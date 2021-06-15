@@ -41,21 +41,28 @@ const maybeInflate = (cache, cacheContents, item, path) => {
     const cacheKey = cache.identify(item);
     const cacheItem = cacheContents[cacheKey] || item;
 
-    if (!cacheItem.__typename) {
+    // If the item can't be found in the cache, any of the fields it references still might, though, so we have to go deeper.
+    if (!cacheKey) {
         return inflate(cache, cacheContents, cacheItem, path);
     }
 
+    // Avoid infinite loops by tracking the path through the tree. If the same typename is encountered twice throughout
+    // a branch, stop going deeper.
     if (path.includes(cacheItem.__typename)) {
         return buildLeaf(cache, cacheItem, cacheKey);
     }
 
-    if (!itemCache[cacheKey]) {
-        itemCache[cacheKey] = inflate(cache, cacheContents, cacheItem, [...path, cacheItem.__typename]);
+    // Cache inflation can be expensive with large data trees, so avoid having to recalculate the same thing multiple times
+    const itemCacheKey = `${cacheKey}:${path.join('.')}`;
+
+    if (!itemCache[itemCacheKey]) {
+        itemCache[itemCacheKey] = inflate(cache, cacheContents, cacheItem, [...path, cacheItem.__typename]);
     }
 
-    return itemCache[cacheKey];
+    return itemCache[itemCacheKey];
 };
 
+// Iterate through all the fields of a selection set and check whether any of them can be inflated.
 const inflate = (cache, cacheContents, data, path) => (
     Object.entries(data).reduce((result, [key, item]) => {
         const fieldName = getFieldName(key);
@@ -81,6 +88,64 @@ const inflate = (cache, cacheContents, data, path) => (
     }, {})
 );
 
+/*
+This causes each sub selection to contain all the cache data it can find rather than just the selected fields.
+
+A reduced example:
+
+query {
+    todos {
+        id
+        name
+        createdAt
+        done
+    }
+    users {
+        id
+        todos {
+            id
+        }
+    }
+}
+
+Usually, the returned data would look something like this:
+
+{
+    todos: [{
+        id: 1,
+        name: 'Buy groceries',
+        createdAt: '2021-06-13',
+        done: false
+    }],
+    users: [{
+        id: 2,
+        todos: [{
+            id: 1
+        }]
+    }]
+}
+
+The users's todos only contain the id because that is what was requested, but we have more data in the cache
+due to the todos root query. Cache inflation makes all that data available without having to request it:
+
+{
+    todos: [{
+        id: 1,
+        name: 'Buy groceries',
+        createdAt: '2021-06-13',
+        done: false
+    }],
+    users: [{
+        id: 2,
+        todos: [{
+            id: 1,
+            name: 'Buy groceries',
+            createdAt: '2021-06-13',
+            done: false
+        }]
+    }]
+}
+*/
 export default (cache, data) => {
     if (!data) {
         return data;
