@@ -218,7 +218,7 @@ If the cache object(s) of your modifier should be removed from the cache entirel
 
 ### useSubscription
 
-`useQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterpart. Additionally, it supports the following new options:
+`useSubscription` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usesubscription) counterpart. Additionally, it supports the following new options:
 
 #### - modifiers
 
