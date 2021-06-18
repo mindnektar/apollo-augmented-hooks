@@ -33,7 +33,7 @@ const getFetchPolicy = (reducedQueryAst, options) => {
 export default (query, options = {}) => {
     const cacheDataRef = useRef();
     const client = apolloClient();
-    const queryAst = gql(query);
+    const queryAst = typeof query === 'string' ? gql(query) : query;
     const variables = getVariablesWithPagination(options);
     const globalContext = useGlobalContext();
     const [inflatedCacheData, setInflatedCacheData] = useState(null);

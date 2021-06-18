@@ -462,7 +462,7 @@ update: (cache, mutationResult) => {
                         }
                     `
                 });
-                    
+
                 return [...previous, newUserRef];
             }
         }
@@ -658,7 +658,7 @@ export default () => {
 ```
 
 1. We import `useMutation` from `apollo-augmented-hooks`, not from `@apollo/client`.
-1. We don't need `gql` to transform the graphql string into an abstract syntax tree - this is done internally by `useMutation`.
+1. We don't need `gql` to transform the graphql string into an abstract syntax tree - this is done internally by `useMutation` (though you can still manually wrap the string in `gql`, if you wish).
 1. `useMutation` doesn't return a tuple, the first element of which is the mutate function - instead, it only returns the mutate function (so you can omit the brackets).
 1. Rather than passing an `update` function to the mutate call, you pass a `modifiers` array.
 
@@ -753,7 +753,7 @@ update: (cache, mutationResult) => {
 }
 ```
 
-The `id` parameter specifies the key of the cache item that we wish to update - other than that, it works just like a modification to the root query. Of course, we want this code to work for any user, not just `foobar`, so we need to generate the `id` parameter dynamically. 
+The `id` parameter specifies the key of the cache item that we wish to update - other than that, it works just like a modification to the root query. Of course, we want this code to work for any user, not just `foobar`, so we need to generate the `id` parameter dynamically.
 
 ```javascript
 import { gql, useMutation } from '@apollo/client';

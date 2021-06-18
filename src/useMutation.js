@@ -7,7 +7,7 @@ import { useGlobalContext } from './globalContextHook';
 
 export default (mutation, hookOptions = {}) => {
     const client = apolloClient();
-    const mutationAst = gql(mutation);
+    const mutationAst = typeof mutation === 'string' ? gql(mutation) : mutation;
     const mutationName = mutationAst.definitions[0].selectionSet.selections[0].name.value;
     const [mutate] = useMutation(mutationAst, {
         ...hookOptions,

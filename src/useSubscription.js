@@ -4,7 +4,7 @@ import { handleModifiers } from './helpers/modifiers';
 
 export default (subscription, options = {}) => {
     const client = apolloClient();
-    const subscriptionAst = gql(subscription);
+    const subscriptionAst = typeof subscription === 'string' ? gql(subscription) : subscription;
     const subscriptionName = subscriptionAst.definitions[0].selectionSet.selections[0].name.value;
 
     return useSubscription(subscriptionAst, {
