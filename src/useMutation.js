@@ -32,14 +32,12 @@ export default (mutation, hookOptions = {}) => {
                 handleOptimisticResponse(options.optimisticResponse, input, mutationName)
             ),
             update: async (cache, result) => {
-                const c = cache;
-
                 if (options.update) {
-                    options.update(c, result);
+                    options.update(cache, result);
                 }
 
                 // Simplify cache updates after mutations.
-                handleModifiers(c, result.data[mutationName], options.modifiers);
+                handleModifiers(cache, result.data[mutationName], options.modifiers);
 
                 // If this is a server response (and not an optimistic response), wait until any queries
                 // in flight are completed, to avoid the mutation result getting overwritten by
@@ -48,7 +46,7 @@ export default (mutation, hookOptions = {}) => {
                 // previous cache result otherwise.
                 if (!result.data.__optimistic && areRequestsInFlight()) {
                     await waitForRequestsInFlight();
-                    handleModifiers(c, result.data[mutationName], options.modifiers);
+                    handleModifiers(cache, result.data[mutationName], options.modifiers);
                 }
             },
         })
