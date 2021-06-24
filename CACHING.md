@@ -17,6 +17,7 @@ By default, the results of all graphql requests made with `ApolloClient` are cac
 - [How do I add something to the cache using apollo-augmented-hooks?](#how-do-i-add-something-to-the-cache-using-apollo-augmented-hooks)
 - [How do I update a specific cache item rather than the root query?](#how-do-i-update-a-specific-cache-item-rather-than-the-root-query)
 - [How do I delete something from the cache?](#how-do-i-delete-something-from-the-cache)
+- [How do I append a new field to a cache object?](#how-do-i-append-a-new-field-to-a-cache-object)
 
 ## What does the cache look like?
 
@@ -933,3 +934,85 @@ modifiers: [{
 Since we don't have access to the mutation result in the modifiers array, `cacheObject` allows us to pass a function rather than the required cache object itself. That function's only parameter is synonymous with `mutationResult.data.deleteTodo`, so since that is exactly what we want to evict, we can simply return it here.
 
 Evicting cache items is the recommended way to remove them from the cache, because with it you won't have to modify every single reference to the removed cache item manually. The automatic reference clean-up only works for arrays, however, so if your cache item is referenced not as a list member, you'll have to remove the reference yourself.
+
+## How do I append a new field to a cache object?
+
+As the name suggests, `cache.modify` only allows you to change the values of already present fields. But what if you want to add a new field to a cache object? With `cache.modify`, it can't be done, and most of the time, there won't be any reason to even attempt it, but there are certain plausible scenarios.
+
+Imagine the following: Access to your application is limited to authenticated users. Before the first graphql query is sent to the server, a user will have to authenticate using a login form. Submitting the form will fire off a mutation which - if successful - will return an auth token. The now authenticated user will be redirected to the application's dashboard, where we can now send the query along with the auth token. However, the data requested with the query that we need to display the dashboard might as well be sent along with the auth token in the mutation response, saving us an entire round trip to the server and making the application load faster. The problem is that none of the data returned by the mutation will have a representation in the cache yet, so `cache.modify` can't help us here.
+
+One option would be `cache.writeQuery`, which allows us to add arbitrary data to the cache:
+
+```javascript
+import { useMutation, gql } from '@apollo/client';
+
+// Hard-coded parameters for simplicity
+const mutation = gql`
+    mutation {
+        authenticate(username: "foobar", password: "1234") {
+            authToken
+            todos {
+                id
+                title
+            }
+        }
+    }
+`;
+
+export default () => {
+    const [mutate] = useMutation(mutation);
+
+    return () => (
+        mutate({
+            update: (cache, { data }) => {
+                cache.writeQuery({
+                    query: gql`
+                        todos {
+                            id
+                            title
+                        }
+                    `,
+                    data: {
+                        todos: data.authenticate.todos
+                    }
+                });
+            }
+        })
+    );
+}
+```
+
+This works, but as I'm not a huge fan of the verbosity of cache updates using graphql queries and I prefer using the same API for similar things, I've added the `newFields` option to `apollo-augmented-hooks`' `modifiers`, and since it is used essentially just like the already familiar `fields` option, the solution becomes quite straightforward:
+
+```javascript
+import { useMutation } from 'apollo-augmented-hooks';
+
+// Hard-coded parameters for simplicity
+const mutation = `
+    mutation {
+        authenticate(username: "foobar", password: "1234") {
+            authToken
+            todos {
+                id
+                title
+            }
+        }
+    }
+`;
+
+export default () => {
+    const mutate = useMutation(mutation);
+
+    return () => (
+        mutate({
+            modifiers: [{
+                newFields: {
+                    todos: ({ item, toReference }) => (
+                        item.todos.map(toReference)
+                    )
+                }
+            }]
+        })
+    );
+}
+```
