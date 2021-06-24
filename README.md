@@ -212,6 +212,39 @@ mutate({
 });
 ```
 
+##### newFields
+
+Sometimes you might want to add fields to cache objects that do not exist yet in order to avoid another server roundtrip to fetch data that your mutation already provides. `cache.modify` can't do that (as the name suggests, you can only modify existing fields), and `cache.writeQuery` is very verbose, so `newFields` provides a compact way to accomplish it. It has essentially the same API as `fields`, but the only available helpers are `item`, `itemRef` and `toReference`. Since there is no previous data (as we're adding a new field), many of the helpers necessary for `fields` are obsolete here.
+
+Example for adding the field `things` to the root query:
+
+```js
+mutate({
+    input: someInput,
+    modifiers: [{
+        newFields: {
+            things: ({ itemRef }) => itemRef,
+        },
+    }],
+});
+```
+
+If you wish to add a parameterized field to the cache, you can pass the variables like this:
+
+```js
+mutate({
+    input: someInput,
+    modifiers: [{
+        newFields: {
+            things: {
+                variables: { someKey: someValue },
+                modify: ({ itemRef }) => itemRef,
+            }
+        },
+    }],
+});
+```
+
 ##### evict
 
 If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`.

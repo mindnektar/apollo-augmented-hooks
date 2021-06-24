@@ -1,3 +1,5 @@
+import stringify from 'json-stable-stringify';
+
 // Apollo offers no streamlined way to extract the query variables for the cache object we are
 // modifying, so this helper has to exist.
 const getVariables = (details) => {
@@ -82,7 +84,7 @@ export const handleModifiers = (cache, item, modifiers) => {
         return;
     }
 
-    modifiers.forEach(({ cacheObject, typename, fields, evict }) => {
+    modifiers.forEach(({ cacheObject, typename, fields, newFields, evict }) => {
         const cacheIds = getCacheIds(cache, item, cacheObject, typename);
 
         cacheIds.forEach((cacheId) => {
@@ -92,6 +94,41 @@ export const handleModifiers = (cache, item, modifiers) => {
                 cache.evict({ id: cacheId });
                 cache.gc();
                 return;
+            }
+
+            if (newFields) {
+                // Sometimes you might want to add fields to cache objects that do not exist yet in order to
+                // avoid another server roundtrip to fetch data that your mutation already provides. `cache.modify`
+                // can't do that (as the name suggests, you can only modify existing fields), and `cache.writeQuery`
+                // is very verbose, so let's provide a compact way via a modifier.
+                const dataToMerge = Object.entries(newFields).reduce((result, [fieldName, modifier]) => {
+                    if (typeof modifier === 'function') {
+                        return {
+                            ...result,
+                            [fieldName]: modifier({
+                                toReference: cache.data.toReference,
+                                item,
+                                itemRef: cache.data.toReference(item),
+                            }),
+                        };
+                    }
+
+                    const storeFieldName = modifier.variables
+                        ? `${fieldName}(${stringify(modifier.variables)})`
+                        : fieldName;
+
+                    return {
+                        ...result,
+                        [storeFieldName]: modifier.modify({
+                            toReference: cache.data.toReference,
+                            item,
+                            itemRef: cache.data.toReference(item),
+                            variables: modifier.variables,
+                        }),
+                    };
+                }, {});
+
+                cache.data.merge(cacheId, dataToMerge);
             }
 
             try {
