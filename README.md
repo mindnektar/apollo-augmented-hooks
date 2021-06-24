@@ -1,3 +1,5 @@
+[![npm version](https://badge.fury.io/js/apollo-augmented-hooks.svg)](//npmjs.com/package/apollo-augmented-hooks)
+
 # apollo-augmented-hooks
 
 Drop-in replacements for [@apollo/client](https://github.com/apollographql/apollo-client)'s `useQuery`, `useMutation` and `useSubscription` hooks with reduced overhead and additional functionality.
