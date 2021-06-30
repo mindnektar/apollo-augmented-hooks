@@ -920,7 +920,7 @@ update: (cache, mutationResult) => {
 }
 ```
 
-Calling `cache.evict` will remove the specified item from the cache, and it also removes all references to it from any array in the cache. It is advisable to do a `cache.gc` afterwards anyway, because evicting the cache item might cause other cache items to no longer be referenced. See [this very helpful section](https://www.apollographql.com/docs/react/caching/garbage-collection/#cacheevict) in the official documentation for more info on what happens under the hood when using cache eviction.
+Calling `cache.evict` will remove the specified item from the cache. It is advisable to do a `cache.gc` afterwards anyway, because evicting the cache item might cause other cache items to no longer be referenced. See [this very helpful section](https://www.apollographql.com/docs/react/caching/garbage-collection/#cacheevict) in the official documentation for more info on what happens under the hood when using cache eviction.
 
 The `modifiers` option in `apollo-augmented-hooks` also includes a convenient way to do the above:
 
@@ -933,7 +933,7 @@ modifiers: [{
 
 Since we don't have access to the mutation result in the modifiers array, `cacheObject` allows us to pass a function rather than the required cache object itself. That function's only parameter is synonymous with `mutationResult.data.deleteTodo`, so since that is exactly what we want to evict, we can simply return it here.
 
-Evicting cache items is the recommended way to remove them from the cache, because with it you won't have to modify every single reference to the removed cache item manually. The automatic reference clean-up only works for arrays, however, so if your cache item is referenced not as a list member, you'll have to remove the reference yourself.
+Evicting cache items is the recommended way to remove them from the cache, because with it you won't have to modify every single reference to the removed cache item manually. Apollo automatically ignores dangling references to evicted cache objects - though this only works for references in arrays, so if your cache item is not referenced within an array, you'll have to remove the reference yourself.
 
 ## How do I append a new field to a cache object?
 
