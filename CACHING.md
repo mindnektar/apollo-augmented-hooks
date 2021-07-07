@@ -17,7 +17,7 @@ By default, the results of all graphql requests made with `ApolloClient` are cac
 - [How do I add something to the cache using apollo-augmented-hooks?](#how-do-i-add-something-to-the-cache-using-apollo-augmented-hooks)
 - [How do I update a specific cache item rather than the root query?](#how-do-i-update-a-specific-cache-item-rather-than-the-root-query)
 - [How do I delete something from the cache?](#how-do-i-delete-something-from-the-cache)
-- [How do I handle n:m relationships in the cache?](#how-do-i-handle-n-m-relationships-in-the-cache)
+- [How do I handle n:m relationships in the cache?](#how-do-i-handle-nm-relationships-in-the-cache)
 - [How do I append a new field to a cache object?](#how-do-i-append-a-new-field-to-a-cache-object)
 
 ## What does the cache look like?
