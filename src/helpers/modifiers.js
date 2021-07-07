@@ -27,7 +27,7 @@ const handleIncludeIf = (cache, item, previous, details) => (
 
 let shouldResetReducedQueries = false;
 
-const augmentFields = (cache, item, fields) => {
+const augmentFields = (cache, cacheObject, item, fields) => {
     const modify = (callback, previous, details) => {
         // Attach a couple additional helpers to apollo's standard details object.
         const callbackResult = callback({
@@ -37,6 +37,7 @@ const augmentFields = (cache, item, fields) => {
             itemRef: details.toReference(item),
             variables: getVariables(details),
             includeIf: handleIncludeIf(cache, item, previous, details),
+            cacheObject,
         });
 
         // Since the reduced queries are cached, they need to be notified when the DELETE sentinel
@@ -63,7 +64,7 @@ const augmentFields = (cache, item, fields) => {
     }), {});
 };
 
-const getCacheIds = (cache, item, cacheObject, typename) => {
+const getCacheIds = (cache, cacheData, item, cacheObject, typename) => {
     if (!cacheObject && !typename) {
         return ['ROOT_QUERY'];
     }
@@ -76,7 +77,7 @@ const getCacheIds = (cache, item, cacheObject, typename) => {
         return [cache.identify(cacheObject)];
     }
 
-    return Object.keys(cache.extract()).filter((key) => key.startsWith(`${typename}:`));
+    return Object.keys(cacheData).filter((key) => key.startsWith(`${typename}:`));
 };
 
 export const handleModifiers = (cache, item, modifiers) => {
@@ -84,8 +85,10 @@ export const handleModifiers = (cache, item, modifiers) => {
         return;
     }
 
+    const cacheData = cache.extract();
+
     modifiers.forEach(({ cacheObject, typename, fields, newFields, evict }) => {
-        const cacheIds = getCacheIds(cache, item, cacheObject, typename);
+        const cacheIds = getCacheIds(cache, cacheData, item, cacheObject, typename);
 
         cacheIds.forEach((cacheId) => {
             if (evict) {
@@ -109,6 +112,7 @@ export const handleModifiers = (cache, item, modifiers) => {
                                 toReference: cache.data.toReference,
                                 item,
                                 itemRef: cache.data.toReference(item),
+                                cacheObject: cacheData[cacheId],
                             }),
                         };
                     }
@@ -124,6 +128,7 @@ export const handleModifiers = (cache, item, modifiers) => {
                             item,
                             itemRef: cache.data.toReference(item),
                             variables: modifier.variables,
+                            cacheObject: cacheData[cacheId],
                         }),
                     };
                 }, {});
@@ -134,7 +139,7 @@ export const handleModifiers = (cache, item, modifiers) => {
             try {
                 cache.modify({
                     id: cacheId,
-                    fields: augmentFields(cache, item, fields),
+                    fields: augmentFields(cache, cacheData[cacheId], item, fields),
                 });
             } catch (error) {
                 // Cache errors are swallowed, so specifically output them to the console.
