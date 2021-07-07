@@ -154,6 +154,10 @@ This works the same as apollo's [cache.modify](https://www.apollographql.com/doc
 
 This is what used to be the field function's first parameter, the field's previous value. Since it is often not needed, it is now part of the `details` object and can simply be ignored.
 
+###### *cacheObject*
+
+This is the cache object that you are currently modifying a field on. This helper is especially useful in conjunction with the `typename` option.
+
 ###### *item*
 
 The data returned by your mutation.
@@ -216,7 +220,7 @@ mutate({
 
 ##### newFields
 
-Sometimes you might want to add fields to cache objects that do not exist yet in order to avoid another server roundtrip to fetch data that your mutation already provides. `cache.modify` can't do that (as the name suggests, you can only modify existing fields), and `cache.writeQuery` is very verbose, so `newFields` provides a compact way to accomplish it. It has essentially the same API as `fields`, but the only available helpers are `item`, `itemRef` and `toReference`. Since there is no previous data (as we're adding a new field), many of the helpers necessary for `fields` are obsolete here.
+Sometimes you might want to add fields to cache objects that do not exist yet in order to avoid another server roundtrip to fetch data that your mutation already provides. `cache.modify` can't do that (as the name suggests, you can only modify existing fields), and `cache.writeQuery` is very verbose, so `newFields` provides a compact way to accomplish it. It has essentially the same API as `fields`, but the only available helpers are `cacheObject`, `item`, `itemRef` and `toReference`. Since there is no previous data (as we're adding a new field), many of the helpers necessary for `fields` are obsolete here.
 
 Example for adding the field `things` to the root query:
 
