@@ -156,7 +156,7 @@ This is what used to be the field function's first parameter, the field's previo
 
 ###### *cacheObject*
 
-This is the cache object that you are currently modifying a field on. This helper is especially useful in conjunction with the `typename` option.
+This is the cache object that you are currently modifying a field on. This helper is especially useful in conjunction with the `typename` option. See [this section in the caching guide](CACHING.md#how-do-i-handle-nm-relationships-in-the-cache) for a walk-through of a concrete use case.
 
 ###### *item*
 
