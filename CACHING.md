@@ -17,6 +17,7 @@ By default, the results of all graphql requests made with `ApolloClient` are cac
 - [How do I add something to the cache using apollo-augmented-hooks?](#how-do-i-add-something-to-the-cache-using-apollo-augmented-hooks)
 - [How do I update a specific cache item rather than the root query?](#how-do-i-update-a-specific-cache-item-rather-than-the-root-query)
 - [How do I delete something from the cache?](#how-do-i-delete-something-from-the-cache)
+- [How do I handle n:m relationships in the cache?](#how-do-i-handle-n-m-relationships-in-the-cache)
 - [How do I append a new field to a cache object?](#how-do-i-append-a-new-field-to-a-cache-object)
 
 ## What does the cache look like?
@@ -827,7 +828,7 @@ There are a couple of ways, depending on what needs to be deleted. One of the mo
 {
     ROOT_QUERY: {
         __typename: 'Query',
-        'todos': [{
+        todos: [{
             __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
         }, {
             __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
@@ -892,7 +893,7 @@ In either case, the cache will look like this:
 {
     ROOT_QUERY: {
         __typename: 'Query',
-        'todos': [{
+        todos: [{
             __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
         }]
     },
@@ -934,6 +935,186 @@ modifiers: [{
 Since we don't have access to the mutation result in the modifiers array, `cacheObject` allows us to pass a function rather than the required cache object itself. That function's only parameter is synonymous with `mutationResult.data.deleteTodo`, so since that is exactly what we want to evict, we can simply return it here.
 
 Evicting cache items is the recommended way to remove them from the cache, because with it you won't have to modify every single reference to the removed cache item manually. Apollo automatically ignores dangling references to evicted cache objects - though this only works for references in arrays, so if your cache item is not referenced within an array, you'll have to remove the reference yourself.
+
+## How do I handle n:m relationships in the cache?
+
+Cache updates can get rather tricky and difficult to maintain when your graphql API models a classical n:m relationship between types. Imagine our API contains these types:
+
+```graphql
+type Todo {
+    id: ID!
+    title: String!
+    categories: [Category!]!
+}
+
+type Category {
+    id: ID!
+    name: String!
+    todos: [Todo!]!
+}
+```
+
+Our todos can be allocated to a number of categories, and each category can contain a number of todos. When browsing our application, the cache might end up like this:
+
+```javascript
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        todos: [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }, {
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }],
+        categories: [{
+            __ref: 'Category:bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3'
+        }, {
+            __ref: 'Category:3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d'
+        }]
+    },
+    'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8': {
+        __typename: 'Todo',
+        id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
+        title: 'Buy groceries',
+        categories: [{
+            __ref: 'Category:3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d'
+        }]
+    },
+    'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1': {
+        __typename: 'Todo',
+        id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
+        title: 'Do the dishes',
+        categories: [{
+            __ref: 'Category:bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3'
+        }]
+    },
+    'Category:bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3': {
+        __typename: 'Category',
+        id: 'bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3',
+        name: 'Urgent',
+        todos: [{
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }]
+    },
+    'Category:3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d': {
+        __typename: 'Category',
+        id: '3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d',
+        name: 'Involves leaving the house',
+        todos: [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }]
+    }
+}
+```
+
+As you can see, we have the todos "Buy groceries" and "Do the dishes", with the former being allocated to the category "Involves leaving the house", while the latter is "Urgent". Now what if the user decides that the dishes can lie around a bit longer, but he desperately needs to grab a sixpack for tonight's game? He would then mark "Buy groceries" as "Urgent" and remove that category from "Do the dishes", possibly using a mutation like this:
+
+```javascript
+import { useMutation } from 'apollo-augmented-hooks';
+
+const mutation = `
+    mutation updateCategory($input: UpdateCategoryInput!) {
+        updateCategory(input: $input) {
+            id
+            todos {
+                id
+            }
+        }
+    }
+`;
+
+export default (user) => {
+    const mutate = useMutation(mutation);
+    // Hard-coded input for simplicity
+    const input = {
+        id: 'bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3',
+        todos: [{
+            id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }]
+    };
+
+    return () => (
+        mutate({
+            input,
+            modifiers: [
+                // TODO: Update cache here
+            ]
+        })
+    );
+}
+```
+
+After the mutation is done, we're of course leveraging Apollo's automatic cache updates again. `updateCategory` returns the `id` and `__typename` of a `Category` object, and because it is already in the cache, Apollo knows to update it with the server response:
+
+```javascript
+{
+    ROOT_QUERY: {
+        __typename: 'Query',
+        todos: [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }, {
+            __ref: 'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1'
+        }],
+        categories: [{
+            __ref: 'Category:bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3'
+        }, {
+            __ref: 'Category:3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d'
+        }]
+    },
+    'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8': {
+        __typename: 'Todo',
+        id: '36bad921-8fcf-4f33-9f29-0d3cd70205c8',
+        title: 'Buy groceries',
+        categories: [{
+            __ref: 'Category:3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d'
+        }]
+    },
+    'Todo:a2096556-9a4e-4994-9de8-86c9e85ed6a1': {
+        __typename: 'Todo',
+        id: 'a2096556-9a4e-4994-9de8-86c9e85ed6a1',
+        title: 'Do the dishes',
+        categories: [{
+            __ref: 'Category:bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3'
+        }]
+    },
+    'Category:bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3': {
+        __typename: 'Category',
+        id: 'bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3',
+        name: 'Urgent',
+        todos: [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }]
+    },
+    'Category:3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d': {
+        __typename: 'Category',
+        id: '3bd99efa-8a85-4dd3-91e5-a8e9e671ad6d',
+        name: 'Involves leaving the house',
+        todos: [{
+            __ref: 'Todo:36bad921-8fcf-4f33-9f29-0d3cd70205c8'
+        }]
+    }
+}
+```
+
+According to the cache, the "Urgent" category now contains the "Buy groceries" todo, which is exactly what we want - but the "Buy groceries" todo still only has the "Involves leaving the house" category, and "Do the dishes" is still "Urgent". We now have an inconsistent cache state that returns different things depending on how you query them. A category's page will list the correct todos, but a todo's page will list incorrect categories. This can lead to major errors down the line.
+
+In order to fix this, we will need to modify each `Todo` cache object that used to contain the "Urgent" category and now doesn't, as well as each `Todo` cache object that didn't contain the "Urgent" category and now does. This can become a difficult problem, because the only thing we have at our disposal is the list of todos that we sent to the server - and that's only the todos that now contain the "Urgent" category. What about the ones that don't contain it anymore?
+
+`apollo-augmented-hooks` offers a way to solve this issue with a single modifier:
+
+```javascript
+modifiers: [{
+    typename: 'Todo',
+    fields: {
+        categories: ({ cacheObject, includeIf }) => (
+            includeIf(input.todos.some(({ id }) => id === cacheObject.id))
+        )
+    }
+}]
+```
+
+What happens here? The most important bit is the `typename` option that we're using in place of the `cacheObject` option we usually need. `typename` causes the modifier function to be called once for every single object in the cache that matches the passed typename. And in the modifier function itself, we once again make use of the `includeIf` helper to determine whether or not the `Category` object from the server response should be added to the `categories` field. The `cacheObject` helper contains the current iteration's `Todo` object, so to decide if the `Category` object should be included, we can simply check if our `input.todos` array contains the current cache object's id.
+
+With this relatively simple modifier, we have covered every possible permutation of categories and todos that `updateCategory` could ever produce. And if our application happens to allow setting a todo's categories as well (using an `updateTodo` mutation), updating the cache is as easy as using the same modifier as above, but having todos and categories switch places.
 
 ## How do I append a new field to a cache object?
 
