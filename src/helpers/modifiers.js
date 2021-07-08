@@ -80,6 +80,69 @@ const getCacheIds = (cache, cacheData, item, cacheObject, typename) => {
     return Object.keys(cacheData).filter((key) => key.startsWith(`${typename}:`));
 };
 
+const handleEviction = (cache, cacheId) => {
+    // Remove the specified cache object from the cache along with all references to it
+    // on any other cache objects.
+    cache.evict({ id: cacheId });
+    cache.gc();
+};
+
+const handleNewFields = (cache, cacheData, cacheId, item, newFields) => {
+    // Sometimes you might want to add fields to cache objects that do not exist yet in order to
+    // avoid another server roundtrip to fetch data that your mutation already provides. `cache.modify`
+    // can't do that (as the name suggests, you can only modify existing fields), and `cache.writeQuery`
+    // is very verbose, so let's provide a compact way via a modifier.
+    const dataToMerge = Object.entries(newFields).reduce((result, [fieldName, modifier]) => {
+        const helpers = {
+            toReference: cache.data.toReference,
+            item,
+            itemRef: cache.data.toReference(item),
+            cacheObject: cacheData[cacheId],
+        };
+
+        if (typeof modifier === 'function') {
+            return {
+                ...result,
+                [fieldName]: modifier(helpers),
+            };
+        }
+
+        let variables;
+        let storeFieldName = fieldName;
+
+        if (modifier.variables) {
+            variables = typeof modifier.variables === 'function'
+                ? modifier.variables({ item })
+                : modifier.variables;
+            storeFieldName = `${fieldName}(${stringify(variables)})`;
+        }
+
+        return {
+            ...result,
+            [storeFieldName]: modifier.modify({
+                ...helpers,
+                variables,
+            }),
+        };
+    }, {});
+
+    cache.data.merge(cacheId, dataToMerge);
+};
+
+const handleFields = (cache, cacheData, cacheId, item, fields) => {
+    try {
+        cache.modify({
+            id: cacheId,
+            fields: augmentFields(cache, cacheData[cacheId], item, fields),
+        });
+    } catch (error) {
+        // Cache errors are swallowed, so specifically output them to the console.
+        /* eslint-disable-next-line no-console */
+        console.error(error);
+        throw error;
+    }
+};
+
 export const handleModifiers = (cache, item, modifiers) => {
     if (!modifiers) {
         return;
@@ -92,60 +155,15 @@ export const handleModifiers = (cache, item, modifiers) => {
 
         cacheIds.forEach((cacheId) => {
             if (evict) {
-                // Remove the specified cache object from the cache along with all references to it
-                // on any other cache objects.
-                cache.evict({ id: cacheId });
-                cache.gc();
-                return;
+                handleEviction(cache, cacheId);
             }
 
             if (newFields) {
-                // Sometimes you might want to add fields to cache objects that do not exist yet in order to
-                // avoid another server roundtrip to fetch data that your mutation already provides. `cache.modify`
-                // can't do that (as the name suggests, you can only modify existing fields), and `cache.writeQuery`
-                // is very verbose, so let's provide a compact way via a modifier.
-                const dataToMerge = Object.entries(newFields).reduce((result, [fieldName, modifier]) => {
-                    if (typeof modifier === 'function') {
-                        return {
-                            ...result,
-                            [fieldName]: modifier({
-                                toReference: cache.data.toReference,
-                                item,
-                                itemRef: cache.data.toReference(item),
-                                cacheObject: cacheData[cacheId],
-                            }),
-                        };
-                    }
-
-                    const storeFieldName = modifier.variables
-                        ? `${fieldName}(${stringify(modifier.variables)})`
-                        : fieldName;
-
-                    return {
-                        ...result,
-                        [storeFieldName]: modifier.modify({
-                            toReference: cache.data.toReference,
-                            item,
-                            itemRef: cache.data.toReference(item),
-                            variables: modifier.variables,
-                            cacheObject: cacheData[cacheId],
-                        }),
-                    };
-                }, {});
-
-                cache.data.merge(cacheId, dataToMerge);
+                handleNewFields(cache, cacheData, cacheId, item, newFields);
             }
 
-            try {
-                cache.modify({
-                    id: cacheId,
-                    fields: augmentFields(cache, cacheData[cacheId], item, fields),
-                });
-            } catch (error) {
-                // Cache errors are swallowed, so specifically output them to the console.
-                /* eslint-disable-next-line no-console */
-                console.error(error);
-                throw error;
+            if (fields) {
+                handleFields(cache, cacheData, cacheId, item, fields);
             }
         });
     });

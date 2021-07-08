@@ -245,7 +245,25 @@ mutate({
             things: {
                 variables: { someKey: someValue },
                 modify: ({ itemRef }) => itemRef,
-            }
+            },
+        },
+    }],
+});
+```
+
+The `variables` attribute also supports a functional notation. Its single parameter is an object containing an `item` attribute, which is the data returned by your mutation:
+
+```js
+mutate({
+    input: someInput,
+    modifiers: [{
+        newFields: {
+            things: {
+                variables: ({ item}) => ({
+                    id: item.id
+                }),
+                modify: ({ itemRef }) => itemRef,
+            },
         },
     }],
 });
