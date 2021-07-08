@@ -9,7 +9,8 @@ export const handleNextPage = (queryAst, cacheDataRef, reducedResult, pagination
             throw new Error('Cannot call `nextPage` when there is no field with a pagination parameter.');
         }
 
-        const data = [...cacheDataRef.current[paginatedField.name.value]].sort((a, b) => (
+        const data = cacheDataRef.current?.[paginatedField.name.value] || [];
+        const sortedData = [...data].sort((a, b) => (
             pagination.direction === 'desc'
                 ? b[pagination.orderBy].localeCompare(a[pagination.orderBy])
                 : a[pagination.orderBy].localeCompare(b[pagination.orderBy])
@@ -19,7 +20,7 @@ export const handleNextPage = (queryAst, cacheDataRef, reducedResult, pagination
             variables: {
                 pagination: {
                     ...pagination,
-                    cursor: data[data.length - 1]?.[pagination.orderBy],
+                    cursor: sortedData[sortedData.length - 1]?.[pagination.orderBy],
                 },
             },
         });
