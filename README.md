@@ -259,7 +259,7 @@ mutate({
     modifiers: [{
         newFields: {
             things: {
-                variables: ({ item}) => ({
+                variables: ({ item }) => ({
                     id: item.id
                 }),
                 modify: ({ itemRef }) => itemRef,
