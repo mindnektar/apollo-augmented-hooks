@@ -14,6 +14,7 @@ By default, the results of all graphql requests made with `ApolloClient` are cac
 - [What does the cache look like?](#what-does-the-cache-look-like)
 - [How do I update the cache after a mutation?](#how-do-i-update-the-cache-after-a-mutation)
 - [How do I add something to the cache?](#how-do-i-add-something-to-the-cache)
+- [How do I handle parameterized queries?](#how-do-i-handle-parameterized-queries)
 - [How do I add something to the cache using apollo-augmented-hooks?](#how-do-i-add-something-to-the-cache-using-apollo-augmented-hooks)
 - [How do I update a specific cache item rather than the root query?](#how-do-i-update-a-specific-cache-item-rather-than-the-root-query)
 - [How do I delete something from the cache?](#how-do-i-delete-something-from-the-cache)
@@ -514,7 +515,9 @@ update: (cache, mutationResult) => {
 
 The modifier function's second parameter includes an undocumented helper function called `toReference`, which essentially does the same thing as the entire `cache.writeFragment` block above. It's much easier to use and produces cleaner and more maintainable code. I am not aware of any reason to use `cache.writeFragment` in favour of this.
 
-Before we take a look at how this works with `apollo-augmented-hooks`, let's cover a slightly more complex example that you have to deal with all the time in real-world applications, but for which there exists no official solution at the time I'm writing this.
+## How do I handle parameterized queries? 
+
+Before we take a look at how cache modification works with `apollo-augmented-hooks`, let's cover a slightly more complex example that you have to deal with all the time in real-world applications, but for which there exists no official solution at the time I'm writing this.
 
 Imagine our todos query was parameterised:
 
