@@ -1,6 +1,6 @@
 {
   "name": "apollo-augmented-hooks",
-  "version": "1.11.2",
+  "version": "1.11.3",
   "description": "Drop-in replacements for @apollo/client's useQuery, useMutation and useSubscription hooks with reduced overhead and additional functionality.",
   "main": "lib/index.js",
   "scripts": {
@@ -41,6 +41,7 @@
     "react": "^17.x"
   },
   "devDependencies": {
+    "@apollo/client": "^3.3.21",
     "@babel/cli": "^7.13.0",
     "@babel/core": "^7.13.8",
     "@babel/plugin-transform-runtime": "^7.14.5",
@@ -53,6 +54,8 @@
     "eslint-plugin-jest": "^24.1.5",
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.22.0",
-    "jest": "^26.6.3"
+    "graphql": "^15.5.1",
+    "jest": "^26.6.3",
+    "react": "^17.0.2"
   }
 }
