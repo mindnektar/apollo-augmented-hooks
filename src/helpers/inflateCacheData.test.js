@@ -149,6 +149,38 @@ it('avoids infinite loops', () => {
     });
 });
 
+it('does not inflate arrays of non-objects', () => {
+    const query = gql`
+        query {
+            todos {
+                id
+                someArray
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query,
+        data: {
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-id',
+                someArray: ['valueA', 'valueB'],
+            }],
+        },
+    });
+
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+
+    expect(inflatedData).toEqual({
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-id',
+            someArray: ['valueA', 'valueB'],
+        }],
+    });
+});
+
 it('works with selection sets that are not in the cache', () => {
     const query = gql`
         query {

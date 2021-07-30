@@ -34,7 +34,7 @@ const buildLeaf = (cache, cacheItem, cacheKey) => {
 };
 
 const maybeInflate = (cache, cacheContents, item, path) => {
-    if (!item) {
+    if (!item || typeof item !== 'object') {
         return item;
     }
 
