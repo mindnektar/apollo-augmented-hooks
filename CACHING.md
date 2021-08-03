@@ -23,7 +23,7 @@ By default, the results of all graphql requests made with `ApolloClient` are cac
 
 ## What does the cache look like?
 
-In order to correctly handle cache updates, it's important to understand the cache's structure. A little tip before we dive into it: For debugging purposes, you can use the [Apollo Client Devtools Chrome Extension](https://chrome.google.com/webstore/detail/apollo-client-devtools/jdkknkkbebbapilgoeccciglkfbmbnfm). Its most useful feature is that it allows you to inspect the current cache contents at any time.
+In order to correctly handle cache updates, it's important to understand the cache's structure. A little tip before we dive into it: For debugging purposes, you can use `window.__APOLLO_CLIENT__.extract()` in your browser's console to view the current cache contents.
 
 The `InMemoryCache`'s structure is a simple normalised object. When the cache is empty, it is an empty object:
 
