@@ -1,4 +1,5 @@
 import stringify from 'json-stable-stringify';
+import { keyFieldsForTypeName } from './keyFields';
 
 // Apollo offers no streamlined way to extract the query variables for the cache object we are
 // modifying, so this helper has to exist.
@@ -15,7 +16,12 @@ const getVariables = (details) => {
 // returns true or false. Reduces overhead.
 const handleIncludeIf = (cache, item, previous, details) => (
     (includeIf) => {
-        const next = previous.filter((ref) => details.readField('id', ref) !== item.id);
+        const keyFields = keyFieldsForTypeName(cache, item.__typename);
+        const next = previous.filter((ref) => (
+            !keyFields.every((keyField) => (
+                details.readField(keyField, ref) === item[keyField]
+            ))
+        ));
 
         if (includeIf) {
             next.push(details.toReference(item));
