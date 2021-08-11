@@ -218,7 +218,7 @@ mutate({
 });
 ```
 
-You can pass a second parameter to `includeIf` that allows you to specify exactly what subjects you'd like to add to the field (if you don't want to add your mutation's result directly) and what the field's original value should be (if you don't want the field's previous value to be used): `includeIf(true, { subjects: ['thingA', 'thingB'], origin: [] })` 
+You can pass a second parameter to `includeIf` that allows you to specify exactly what subjects you'd like to add to the field (if you don't want to add your mutation's result directly) and what the field's original value should be (if you don't want the field's previous value to be used): `includeIf(true, { subjects: [thingA, thingB], origin: [] })` 
 
 ##### newFields
 
