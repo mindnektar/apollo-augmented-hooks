@@ -15,17 +15,30 @@ const getVariables = (details) => {
 // A helper that adds/removes a cache object to/from an array, depending on whether the handler
 // returns true or false. Reduces overhead.
 const handleIncludeIf = (cache, item, previous, details) => (
-    (includeIf) => {
-        const keyFields = keyFieldsForTypeName(cache, item.__typename);
-        const next = previous.filter((ref) => (
-            !keyFields.every((keyField) => (
-                details.readField(keyField, ref) === item[keyField]
+    (condition, { subjects, origin }) => {
+        const subjectsToFilter = subjects || [item];
+        const previousArray = origin || previous;
+
+        if (subjectsToFilter.length === 0) {
+            return previousArray;
+        }
+
+        const keyFields = keyFieldsForTypeName(cache, subjectsToFilter[0].__typename);
+        const next = previousArray.filter((ref) => (
+            subjectsToFilter.some((subject) => (
+                !keyFields.every((keyField) => (
+                    details.readField(keyField, ref) === subject[keyField]
+                ))
             ))
         ));
 
-        if (includeIf) {
-            next.push(details.toReference(item));
-        }
+        subjectsToFilter.forEach((subject) => {
+            const shouldInclude = typeof condition === 'function' ? condition(subject) : condition;
+
+            if (shouldInclude) {
+                next.push(details.toReference(subject));
+            }
+        });
 
         return next;
     }
@@ -149,6 +162,25 @@ const handleFields = (cache, cacheData, cacheId, item, fields) => {
     }
 };
 
+const handleModifier = (cache, cacheData, item, modifier) => {
+    const { cacheObject, typename, fields, newFields, evict } = modifier;
+    const cacheIds = getCacheIds(cache, cacheData, item, cacheObject, typename);
+
+    cacheIds.forEach((cacheId) => {
+        if (evict) {
+            handleEviction(cache, cacheId);
+        }
+
+        if (newFields) {
+            handleNewFields(cache, cacheData, cacheId, item, newFields);
+        }
+
+        if (fields) {
+            handleFields(cache, cacheData, cacheId, item, fields);
+        }
+    });
+};
+
 export const handleModifiers = (cache, item, modifiers) => {
     if (!modifiers) {
         return;
@@ -156,22 +188,20 @@ export const handleModifiers = (cache, item, modifiers) => {
 
     const cacheData = cache.extract();
 
-    modifiers.forEach(({ cacheObject, typename, fields, newFields, evict }) => {
-        const cacheIds = getCacheIds(cache, cacheData, item, cacheObject, typename);
-
-        cacheIds.forEach((cacheId) => {
-            if (evict) {
-                handleEviction(cache, cacheId);
+    modifiers.forEach((modifier) => {
+        if (typeof modifier === 'function') {
+            if (!Array.isArray(item)) {
+                throw new Error('Functional modifiers are only possible if your mutation returned an array');
             }
 
-            if (newFields) {
-                handleNewFields(cache, cacheData, cacheId, item, newFields);
-            }
+            item.forEach((arrayElement) => {
+                handleModifier(cache, cacheData, arrayElement, modifier(arrayElement));
+            });
 
-            if (fields) {
-                handleFields(cache, cacheData, cacheId, item, fields);
-            }
-        });
+            return;
+        }
+
+        handleModifier(modifier);
     });
 
     // If at least one modifier contained a field returning the DELETE sentinel object, cause all
