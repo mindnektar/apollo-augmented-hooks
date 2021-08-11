@@ -41,6 +41,11 @@ const maybeInflate = (cache, cacheContents, item, path) => {
     const cacheKey = cache.identify(item);
     const cacheItem = cacheContents[cacheKey] || item;
 
+    // An object that is no longer in the cache is being referenced, so we'll ignore it.
+    if (cacheItem.__ref) {
+        return undefined;
+    }
+
     // If the item can't be found in the cache, any of the fields it references still might, though, so we have to go deeper.
     if (!cacheKey) {
         return inflate(cache, cacheContents, cacheItem, path);
@@ -70,7 +75,15 @@ const inflate = (cache, cacheContents, data, path) => (
         if (Array.isArray(item)) {
             return {
                 ...result,
-                [fieldName]: item.map((entry) => maybeInflate(cache, cacheContents, entry, path)),
+                [fieldName]: item.reduce((itemResult, entry) => {
+                    const inflatedEntry = maybeInflate(cache, cacheContents, entry, path);
+
+                    if (inflatedEntry === undefined) {
+                        return itemResult;
+                    }
+
+                    return [...itemResult, inflatedEntry];
+                }, []),
             };
         }
 

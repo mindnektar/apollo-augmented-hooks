@@ -181,6 +181,45 @@ it('does not inflate arrays of non-objects', () => {
     });
 });
 
+it('removes references to non-existing cache objects', () => {
+    const query = gql`
+        query {
+            todos {
+                id
+                things {
+                    id
+                }
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query,
+        data: {
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-id',
+                things: [{
+                    __typename: 'Thing',
+                    id: 'some-id-2',
+                }],
+            }],
+        },
+    });
+
+    cache.evict({ id: 'Thing:some-id-2' });
+
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+
+    expect(inflatedData).toEqual({
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-id',
+            things: [],
+        }],
+    });
+});
+
 it('works with selection sets that are not in the cache', () => {
     const query = gql`
         query {
