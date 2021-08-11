@@ -201,7 +201,7 @@ export const handleModifiers = (cache, item, modifiers) => {
             return;
         }
 
-        handleModifier(modifier);
+        handleModifier(cache, cacheData, item, modifier);
     });
 
     // If at least one modifier contained a field returning the DELETE sentinel object, cause all
