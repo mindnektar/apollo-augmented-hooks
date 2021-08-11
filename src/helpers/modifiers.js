@@ -15,24 +15,24 @@ const getVariables = (details) => {
 // A helper that adds/removes a cache object to/from an array, depending on whether the handler
 // returns true or false. Reduces overhead.
 const handleIncludeIf = (cache, item, previous, details) => (
-    (condition, { subjects, origin }) => {
-        const subjectsToFilter = subjects || [item];
-        const previousArray = origin || previous;
+    (condition, options = {}) => {
+        const subjects = options.subjects || [item];
+        const origin = options.origin || previous;
 
-        if (subjectsToFilter.length === 0) {
-            return previousArray;
+        if (subjects.length === 0) {
+            return origin;
         }
 
-        const keyFields = keyFieldsForTypeName(cache, subjectsToFilter[0].__typename);
-        const next = previousArray.filter((ref) => (
-            subjectsToFilter.some((subject) => (
+        const keyFields = keyFieldsForTypeName(cache, subjects[0].__typename);
+        const next = origin.filter((ref) => (
+            subjects.some((subject) => (
                 !keyFields.every((keyField) => (
                     details.readField(keyField, ref) === subject[keyField]
                 ))
             ))
         ));
 
-        subjectsToFilter.forEach((subject) => {
+        subjects.forEach((subject) => {
             const shouldInclude = typeof condition === 'function' ? condition(subject) : condition;
 
             if (shouldInclude) {
