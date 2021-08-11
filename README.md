@@ -273,6 +273,10 @@ mutate({
 
 If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`.
 
+#### - inflateCacheData
+
+Default: `true`. Set to `false` if you wish to disable the cache inflation functionality. See [this guide on cache inflation](CACHE_INFLATION.md) for more information.
+
 ### useSubscription
 
 `useSubscription` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usesubscription) counterpart. Additionally, it supports the following new options:
