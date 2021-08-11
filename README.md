@@ -134,7 +134,7 @@ mutate({
 
 #### - modifiers
 
-`modifiers` serves as a helper to make cache updates after a mutation as pain-free as possible. See [this guide on caching](CACHING.md) for a more detailed explanation. It accepts an array of modifier objects with the following properties:
+`modifiers` serves as a helper to make cache updates after a mutation as pain-free as possible. It accepts an array of modifiers, and each modifier is either an object supporting the following options or a function returning such an object. See [this guide on caching](CACHING.md) for a more detailed explanation and plenty of examples.
 
 ##### cacheObject
 
@@ -217,6 +217,8 @@ mutate({
     }],
 });
 ```
+
+You can pass a second parameter to `includeIf` that allows you to specify exactly what subjects you'd like to add to the field (if you don't want to add your mutation's result directly) and what the field's original value should be (if you don't want the field's previous value to be used): `includeIf(true, { subjects: ['thingA', 'thingB'], origin: [] })` 
 
 ##### newFields
 
