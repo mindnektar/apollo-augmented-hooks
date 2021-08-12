@@ -169,5 +169,11 @@ export default (cache, data) => {
     itemCache = {};
     leafCache = {};
 
+    if (Array.isArray(data)) {
+        return data.map((item) => (
+            inflate(cache, cacheContents, item, [])
+        ));
+    }
+
     return inflate(cache, cacheContents, data, []);
 };
