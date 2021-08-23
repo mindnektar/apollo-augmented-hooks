@@ -220,6 +220,39 @@ it('removes references to non-existing cache objects', () => {
     });
 });
 
+it('works with child data of the same type', () => {
+    const query = gql`
+        query {
+            todos {
+                id
+                title
+                childTodos {
+                    id
+                    title
+                }
+            }
+        }
+    `;
+    const data = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-id',
+            title: 'Do the dishes',
+            childTodos: [{
+                __typename: 'Todo',
+                id: 'some-id-2',
+                title: 'Buy groceries',
+            }],
+        }],
+    };
+
+    cache.writeQuery({ query, data });
+
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+
+    expect(inflatedData).toEqual(data);
+});
+
 it('works with selection sets that are not in the cache', () => {
     const query = gql`
         query {
