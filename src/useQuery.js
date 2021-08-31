@@ -14,7 +14,7 @@ export default (query, options = {}) => {
     useEffect(() => {
         // Store cache result in ref so its contents remain fresh when calling `nextPage`.
         cacheDataRef.current = inflatedCacheData;
-    }, [JSON.stringify(inflatedCacheData)]);
+    });
 
     return {
         ...reducedResult,
