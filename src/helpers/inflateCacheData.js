@@ -2,6 +2,7 @@ import { keyFieldsForTypeName } from './keyFields';
 import { buildFieldName } from './fieldNames';
 
 let leafCache;
+let itemCache;
 
 const getFieldName = (storeFieldName) => {
     const parensIndex = storeFieldName.indexOf('(');
@@ -33,7 +34,7 @@ const buildLeaf = (cache, cacheItem, cacheKey) => {
     return leafCache[cacheKey];
 };
 
-const maybeInflate = (cache, cacheContents, aliases, item, cacheKeyCache) => {
+const maybeInflate = (cache, cacheContents, aliases, item, typenamePath, cacheKeyCache) => {
     if (!item || typeof item !== 'object') {
         return item;
     }
@@ -48,7 +49,7 @@ const maybeInflate = (cache, cacheContents, aliases, item, cacheKeyCache) => {
 
     // If the item can't be found in the cache, any of the fields it references still might, though, so we have to go deeper.
     if (!cacheKey) {
-        return inflate(cache, cacheContents, aliases, cacheItem, cacheKeyCache);
+        return inflate(cache, cacheContents, aliases, cacheItem, typenamePath, cacheKeyCache);
     }
 
     // Avoid infinite loops by keeping track of which cacheKey we've already seen.
@@ -56,18 +57,31 @@ const maybeInflate = (cache, cacheContents, aliases, item, cacheKeyCache) => {
         return buildLeaf(cache, cacheItem, cacheKey);
     }
 
-    // Include both the regular field name and the alias in the object.
-    const cacheItemWithAliases = Object.entries(cacheItem).reduce((result, [fieldName, value]) => ({
-        ...result,
-        [fieldName]: value,
-        [aliases[fieldName] || fieldName]: value,
-    }), {});
+    const itemCacheKey = `${cacheKey}:${typenamePath.join('.')}`;
 
-    return inflate(cache, cacheContents, aliases, cacheItemWithAliases, [...cacheKeyCache, cacheKey]);
+    if (!itemCache[itemCacheKey]) {
+        // Include both the regular field name and the alias in the object.
+        const cacheItemWithAliases = Object.entries(cacheItem).reduce((result, [fieldName, value]) => ({
+            ...result,
+            [fieldName]: value,
+            [aliases[fieldName] || fieldName]: value,
+        }), {});
+
+        itemCache[itemCacheKey] = inflate(
+            cache,
+            cacheContents,
+            aliases,
+            cacheItemWithAliases,
+            [...typenamePath, cacheItemWithAliases.__typename],
+            [...cacheKeyCache, cacheKey]
+        );
+    }
+
+    return itemCache[itemCacheKey];
 };
 
 // Iterate through all the fields of a selection set and check whether any of them can be inflated.
-const inflate = (cache, cacheContents, aliases, data, cacheKeyCache = []) => (
+const inflate = (cache, cacheContents, aliases, data, typenamePath, cacheKeyCache = []) => (
     Object.entries(data).reduce((result, [key, item]) => {
         const fieldName = getFieldName(key);
 
@@ -75,7 +89,7 @@ const inflate = (cache, cacheContents, aliases, data, cacheKeyCache = []) => (
             return {
                 ...result,
                 [fieldName]: item.reduce((itemResult, entry) => {
-                    const inflatedEntry = maybeInflate(cache, cacheContents, aliases, entry, cacheKeyCache);
+                    const inflatedEntry = maybeInflate(cache, cacheContents, aliases, entry, typenamePath, cacheKeyCache);
 
                     if (inflatedEntry === undefined) {
                         return itemResult;
@@ -89,7 +103,7 @@ const inflate = (cache, cacheContents, aliases, data, cacheKeyCache = []) => (
         if (typeof item === 'object') {
             return {
                 ...result,
-                [fieldName]: maybeInflate(cache, cacheContents, aliases, item, cacheKeyCache),
+                [fieldName]: maybeInflate(cache, cacheContents, aliases, item, typenamePath, cacheKeyCache),
             };
         }
 
@@ -185,12 +199,13 @@ export default (cache, data, queryAst, variables) => {
     const aliases = extractAliases(queryAst.definitions[0].selectionSet, variables);
 
     leafCache = {};
+    itemCache = {};
 
     if (Array.isArray(data)) {
         return data.map((item) => (
-            inflate(cache, cacheContents, aliases, item)
+            inflate(cache, cacheContents, aliases, item, [])
         ));
     }
 
-    return inflate(cache, cacheContents, aliases, data);
+    return inflate(cache, cacheContents, aliases, data, []);
 };

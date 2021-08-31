@@ -173,6 +173,11 @@ it('includes every field of a sub selection even if it was already seen in the t
                     latestMessage: {
                         __typename: 'Message',
                         id: 'some-message-id-2',
+                        name: 'foo',
+                        conversation: {
+                            __typename: 'Conversation',
+                            id: 'some-conversation-id',
+                        },
                     },
                     communication: {
                         __typename: 'Communication',
