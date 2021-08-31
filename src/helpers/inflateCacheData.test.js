@@ -74,39 +74,128 @@ it('inflates sub selections with matching cache data', () => {
 it('includes every field of a sub selection even if it was already seen in the traversal', () => {
     const query = gql`
         query {
-            todos {
+            conversations {
                 id
-                user {
+                latestMessage {
+                    id
+                }
+                communication {
+                    id
+                }
+            }
+            notifications {
+                id
+                message {
                     id
                     name
+                    conversation {
+                        id
+                    }
                 }
             }
         }
     `;
     const data = {
-        todos: [{
-            __typename: 'Todo',
-            id: 'some-id',
-            user: {
-                __typename: 'User',
-                id: 'some-user-id',
+        notifications: [{
+            __typename: 'Notification',
+            id: 'some-notification-id',
+            message: {
+                __typename: 'Message',
+                id: 'some-message-id',
                 name: 'foo',
+                conversation: {
+                    __typename: 'Conversation',
+                    id: 'some-conversation-id',
+                },
             },
         }, {
-            __typename: 'Todo',
-            id: 'some-id-2',
-            user: {
-                __typename: 'User',
-                id: 'some-user-id',
+            __typename: 'Notification',
+            id: 'some-notification-id-2',
+            message: {
+                __typename: 'Message',
+                id: 'some-message-id-2',
                 name: 'foo',
+                conversation: {
+                    __typename: 'Conversation',
+                    id: 'some-conversation-id',
+                },
+            },
+        }],
+        conversations: [{
+            __typename: 'Conversation',
+            id: 'some-conversation-id',
+            latestMessage: {
+                __typename: 'Message',
+                id: 'some-message-id-2',
+            },
+            communication: {
+                __typename: 'Communication',
+                id: 'some-communication-id',
+            },
+        }],
+    };
+    const expected = {
+        notifications: [{
+            __typename: 'Notification',
+            id: 'some-notification-id',
+            message: {
+                __typename: 'Message',
+                id: 'some-message-id',
+                name: 'foo',
+                conversation: {
+                    __typename: 'Conversation',
+                    id: 'some-conversation-id',
+                    latestMessage: {
+                        __typename: 'Message',
+                        id: 'some-message-id-2',
+                        name: 'foo',
+                        conversation: {
+                            __typename: 'Conversation',
+                            id: 'some-conversation-id',
+                        },
+                    },
+                    communication: {
+                        __typename: 'Communication',
+                        id: 'some-communication-id',
+                    },
+                },
             },
         }, {
-            __typename: 'Todo',
-            id: 'some-id-3',
-            user: {
-                __typename: 'User',
-                id: 'some-user-id',
+            __typename: 'Notification',
+            id: 'some-notification-id-2',
+            message: {
+                __typename: 'Message',
+                id: 'some-message-id-2',
                 name: 'foo',
+                conversation: {
+                    __typename: 'Conversation',
+                    id: 'some-conversation-id',
+                    latestMessage: {
+                        __typename: 'Message',
+                        id: 'some-message-id-2',
+                    },
+                    communication: {
+                        __typename: 'Communication',
+                        id: 'some-communication-id',
+                    },
+                },
+            },
+        }],
+        conversations: [{
+            __typename: 'Conversation',
+            id: 'some-conversation-id',
+            latestMessage: {
+                __typename: 'Message',
+                id: 'some-message-id-2',
+                name: 'foo',
+                conversation: {
+                    __typename: 'Conversation',
+                    id: 'some-conversation-id',
+                },
+            },
+            communication: {
+                __typename: 'Communication',
+                id: 'some-communication-id',
             },
         }],
     };
@@ -115,7 +204,7 @@ it('includes every field of a sub selection even if it was already seen in the t
 
     const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
 
-    expect(inflatedData).toEqual(data);
+    expect(inflatedData).toEqual(expected);
 });
 
 it('avoids infinite loops', () => {
@@ -176,7 +265,6 @@ it('avoids infinite loops', () => {
                 todos: [{
                     __typename: 'Todo',
                     id: 'some-id',
-                    title: 'some-title',
                 }],
             }],
         }],
@@ -191,12 +279,6 @@ it('avoids infinite loops', () => {
                 users: [{
                     __typename: 'User',
                     id: 'some-id-2',
-                    name: 'some-name',
-                    todos: [{
-                        __typename: 'Todo',
-                        id: 'some-id',
-                        title: 'some-title',
-                    }],
                 }],
             }],
         }],
