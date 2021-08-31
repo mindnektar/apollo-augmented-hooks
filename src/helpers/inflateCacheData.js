@@ -1,7 +1,8 @@
-import { keyFieldsForTypeName } from './keyFields';
+import { buildFieldName } from './fieldNames';
 
-let itemCache;
 let leafCache;
+let itemCache;
+let cacheKeyCache;
 
 const getFieldName = (storeFieldName) => {
     const parensIndex = storeFieldName.indexOf('(');
@@ -21,19 +22,19 @@ const getFieldName = (storeFieldName) => {
 
 const buildLeaf = (cache, cacheItem, cacheKey) => {
     if (!leafCache[cacheKey]) {
-        leafCache[cacheKey] = {
-            ...keyFieldsForTypeName(cache, cacheItem.__typename).reduce((result, keyField) => ({
-                ...result,
-                [keyField]: cacheItem[keyField],
-            }), {}),
-            __typename: cacheItem.__typename,
-        };
+        leafCache[cacheKey] = Object.entries(cacheItem).reduce((result, [key, value]) => {
+            if (typeof value === 'object') {
+                return result;
+            }
+
+            return { ...result, [key]: value };
+        }, {});
     }
 
     return leafCache[cacheKey];
 };
 
-const maybeInflate = (cache, cacheContents, item, path) => {
+const maybeInflate = (cache, cacheContents, aliases, item, rootQueryKey) => {
     if (!item || typeof item !== 'object') {
         return item;
     }
@@ -48,36 +49,42 @@ const maybeInflate = (cache, cacheContents, item, path) => {
 
     // If the item can't be found in the cache, any of the fields it references still might, though, so we have to go deeper.
     if (!cacheKey) {
-        return inflate(cache, cacheContents, cacheItem, path);
+        return inflate(cache, cacheContents, aliases, cacheItem, rootQueryKey);
     }
 
-    // Avoid infinite loops by tracking the path through the tree. If the same typename is encountered twice throughout a branch, stop going
-    // deeper. However, do allow it if the typenames are direct parents/children in the tree on the asssumption that a list of cache objects
-    // will not contain lists of references to themselves.
-    if (path.slice(0, -1).includes(cacheItem.__typename)) {
-        return buildLeaf(cache, cacheItem, cacheKey);
+    // Avoid infinite loops by keeping track of which cacheKey we've already seen.
+    if (cacheKeyCache[rootQueryKey].includes(cacheKey)) {
+        return itemCache[cacheKey] || buildLeaf(cache, cacheItem, cacheKey);
     }
 
-    // Cache inflation can be expensive with large data trees, so avoid having to recalculate the same thing multiple times
-    const itemCacheKey = `${cacheKey}:${path.join('.')}`;
+    // Include both the regular field name as well as the alias in the object.
+    const cacheItemWithAliases = Object.entries(cacheItem).reduce((result, [fieldName, value]) => ({
+        ...result,
+        [fieldName]: value,
+        [aliases[fieldName] || fieldName]: value,
+    }), {});
 
-    if (!itemCache[itemCacheKey]) {
-        itemCache[itemCacheKey] = inflate(cache, cacheContents, cacheItem, [...path, cacheItem.__typename]);
-    }
+    cacheKeyCache[rootQueryKey].push(cacheKey);
 
-    return itemCache[itemCacheKey];
+    itemCache[cacheKey] = inflate(cache, cacheContents, aliases, cacheItemWithAliases, rootQueryKey);
+
+    return itemCache[cacheKey];
 };
 
 // Iterate through all the fields of a selection set and check whether any of them can be inflated.
-const inflate = (cache, cacheContents, data, path) => (
+const inflate = (cache, cacheContents, aliases, data, rootQueryKey) => (
     Object.entries(data).reduce((result, [key, item]) => {
         const fieldName = getFieldName(key);
+
+        if (!rootQueryKey) {
+            cacheKeyCache[key] = [];
+        }
 
         if (Array.isArray(item)) {
             return {
                 ...result,
                 [fieldName]: item.reduce((itemResult, entry) => {
-                    const inflatedEntry = maybeInflate(cache, cacheContents, entry, path);
+                    const inflatedEntry = maybeInflate(cache, cacheContents, aliases, entry, rootQueryKey || key);
 
                     if (inflatedEntry === undefined) {
                         return itemResult;
@@ -91,13 +98,31 @@ const inflate = (cache, cacheContents, data, path) => (
         if (typeof item === 'object') {
             return {
                 ...result,
-                [fieldName]: maybeInflate(cache, cacheContents, item, path),
+                [fieldName]: maybeInflate(cache, cacheContents, aliases, item, rootQueryKey || key),
             };
         }
 
         return {
             ...result,
             [fieldName]: item,
+        };
+    }, {})
+);
+
+const extractAliases = (selectionSet, variables) => (
+    selectionSet.selections.reduce((result, selection) => {
+        const fieldName = buildFieldName(selection, variables);
+        const subSelections = selection.selectionSet
+            ? extractAliases(selection.selectionSet, variables)
+            : {};
+        const alias = selection.alias
+            ? { [fieldName]: selection.alias.value }
+            : {};
+
+        return {
+            ...result,
+            ...subSelections,
+            ...alias,
         };
     }, {})
 );
@@ -160,21 +185,23 @@ due to the todos root query. Cache inflation makes all that data available witho
     }]
 }
 */
-export default (cache, data) => {
+export default (cache, data, queryAst, variables) => {
     if (!data) {
         return data;
     }
 
     const cacheContents = cache.extract(true);
+    const aliases = extractAliases(queryAst.definitions[0].selectionSet, variables);
 
-    itemCache = {};
     leafCache = {};
+    itemCache = {};
+    cacheKeyCache = {};
 
     if (Array.isArray(data)) {
         return data.map((item) => (
-            inflate(cache, cacheContents, item, [])
+            inflate(cache, cacheContents, aliases, item)
         ));
     }
 
-    return inflate(cache, cacheContents, data, []);
+    return inflate(cache, cacheContents, aliases, data);
 };

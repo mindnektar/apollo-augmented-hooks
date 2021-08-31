@@ -17,11 +17,13 @@ export default (mutation, hookOptions = {}) => {
     const args = mutationAst.definitions[0].selectionSet.selections[0].arguments;
     const globalContext = useGlobalContext();
 
-    return ({ input, ...options } = {}) => (
-        mutate({
-            // Automatically prepend the argument name when there's only a single argument, which is
-            // most of the time ($input or $id), reducing overhead.
-            variables: args.length === 1 ? { [args[0].name.value]: input } : input,
+    return ({ input, ...options } = {}) => {
+        // Automatically prepend the argument name when there's only a single argument, which is
+        // most of the time ($input or $id), reducing overhead.
+        const variables = args.length === 1 ? { [args[0].name.value]: input } : input;
+
+        return mutate({
+            variables,
             ...options,
             context: {
                 ...globalContext,
@@ -38,7 +40,7 @@ export default (mutation, hookOptions = {}) => {
                 }
 
                 const item = options.inflateCacheData !== false
-                    ? inflateCacheData(cache, result.data[mutationName])
+                    ? inflateCacheData(cache, result.data[mutationName], mutationAst, variables)
                     : result.data[mutationName];
 
                 // Simplify cache updates after mutations.
@@ -54,6 +56,6 @@ export default (mutation, hookOptions = {}) => {
                     handleModifiers(cache, item, options.modifiers);
                 }
             },
-        })
-    );
+        });
+    };
 };

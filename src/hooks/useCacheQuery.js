@@ -16,7 +16,7 @@ export default (queryAst, variables, options) => {
     const getInflatedCacheData = () => (
         options.inflateCacheData !== false
             // This makes sure that every requested field always contains the entire cache item, and not just the requested sub selection.
-            ? inflateCacheData(client.cache, cacheResult.data)
+            ? inflateCacheData(client.cache, cacheResult.data, queryAst, variables)
             : cacheResult.data
     );
 

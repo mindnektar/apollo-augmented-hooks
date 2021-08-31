@@ -47,7 +47,7 @@ it('inflates sub selections with matching cache data', () => {
         },
     });
 
-    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
 
     expect(inflatedData).toEqual({
         todos: [{
@@ -69,6 +69,53 @@ it('inflates sub selections with matching cache data', () => {
             }],
         }],
     });
+});
+
+it('includes every field of a sub selection even if it was already seen in the traversal', () => {
+    const query = gql`
+        query {
+            todos {
+                id
+                user {
+                    id
+                    name
+                }
+            }
+        }
+    `;
+    const data = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-id',
+            user: {
+                __typename: 'User',
+                id: 'some-user-id',
+                name: 'foo',
+            },
+        }, {
+            __typename: 'Todo',
+            id: 'some-id-2',
+            user: {
+                __typename: 'User',
+                id: 'some-user-id',
+                name: 'foo',
+            },
+        }, {
+            __typename: 'Todo',
+            id: 'some-id-3',
+            user: {
+                __typename: 'User',
+                id: 'some-user-id',
+                name: 'foo',
+            },
+        }],
+    };
+
+    cache.writeQuery({ query, data });
+
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
+
+    expect(inflatedData).toEqual(data);
 });
 
 it('avoids infinite loops', () => {
@@ -115,7 +162,7 @@ it('avoids infinite loops', () => {
         },
     });
 
-    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
 
     expect(inflatedData).toEqual({
         todos: [{
@@ -129,6 +176,7 @@ it('avoids infinite loops', () => {
                 todos: [{
                     __typename: 'Todo',
                     id: 'some-id',
+                    title: 'some-title',
                 }],
             }],
         }],
@@ -143,10 +191,56 @@ it('avoids infinite loops', () => {
                 users: [{
                     __typename: 'User',
                     id: 'some-id-2',
+                    name: 'some-name',
+                    todos: [{
+                        __typename: 'Todo',
+                        id: 'some-id',
+                        title: 'some-title',
+                    }],
                 }],
             }],
         }],
     });
+});
+
+it('works with child data of the same type down the tree', () => {
+    const query = gql`
+        query {
+            todos {
+                id
+                title
+                assignee {
+                    id
+                    assignedTodos {
+                        id
+                        title
+                    }
+                }
+            }
+        }
+    `;
+    const data = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-id',
+            title: 'Do the dishes',
+            assignee: [{
+                __typename: 'Person',
+                id: 'alice',
+                assignedTodos: [{
+                    __typename: 'Todo',
+                    id: 'some-id-2',
+                    title: 'Do the dishes',
+                }],
+            }],
+        }],
+    };
+
+    cache.writeQuery({ query, data });
+
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
+
+    expect(inflatedData).toEqual(data);
 });
 
 it('does not inflate arrays of non-objects', () => {
@@ -170,7 +264,7 @@ it('does not inflate arrays of non-objects', () => {
         },
     });
 
-    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
 
     expect(inflatedData).toEqual({
         todos: [{
@@ -209,7 +303,7 @@ it('removes references to non-existing cache objects', () => {
 
     cache.evict({ id: 'Thing:some-id-2' });
 
-    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
 
     expect(inflatedData).toEqual({
         todos: [{
@@ -218,6 +312,101 @@ it('removes references to non-existing cache objects', () => {
             things: [],
         }],
     });
+});
+
+it('includes both the alias and the regular name', () => {
+    const query = gql`
+        query {
+            todos(someVar: "foo") {
+                id
+                childTodos {
+                    id
+                }
+                childTodosWithVariable: todos(someVar: "bar") {
+                    id
+                }
+                todos(someVar: "baz") {
+                    id
+                }
+            }
+            things {
+                id
+                todos {
+                    id
+                }
+            }
+        }
+    `;
+    const data = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-id',
+            childTodos: [{
+                __typename: 'Todo',
+                id: 'some-id-2',
+            }],
+            childTodosWithVariable: [{
+                __typename: 'Todo',
+                id: 'some-id-3',
+            }],
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-id-4',
+            }],
+        }],
+        things: [{
+            __typename: 'Thing',
+            id: 'some-id-5',
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-id',
+            }],
+        }],
+    };
+    const expected = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-id',
+            childTodos: [{
+                __typename: 'Todo',
+                id: 'some-id-2',
+            }],
+            childTodosWithVariable: [{
+                __typename: 'Todo',
+                id: 'some-id-3',
+            }],
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-id-4',
+            }],
+        }],
+        things: [{
+            __typename: 'Thing',
+            id: 'some-id-5',
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-id',
+                childTodos: [{
+                    __typename: 'Todo',
+                    id: 'some-id-2',
+                }],
+                childTodosWithVariable: [{
+                    __typename: 'Todo',
+                    id: 'some-id-3',
+                }],
+                todos: [{
+                    __typename: 'Todo',
+                    id: 'some-id-4',
+                }],
+            }],
+        }],
+    };
+
+    cache.writeQuery({ query, data });
+
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
+
+    expect(inflatedData).toEqual(expected);
 });
 
 it('works with child data of the same type', () => {
@@ -248,7 +437,7 @@ it('works with child data of the same type', () => {
 
     cache.writeQuery({ query, data });
 
-    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
 
     expect(inflatedData).toEqual(data);
 });
@@ -288,7 +477,7 @@ it('works with selection sets that are not in the cache', () => {
         },
     });
 
-    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }));
+    const inflatedData = inflateCacheData(cache, cache.readQuery({ query }), query);
 
     expect(inflatedData).toEqual({
         users: [{

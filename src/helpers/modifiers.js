@@ -1,16 +1,6 @@
 import stringify from 'json-stable-stringify';
 import { keyFieldsForTypeName } from './keyFields';
-
-// Apollo offers no streamlined way to extract the query variables for the cache object we are
-// modifying, so this helper has to exist.
-const getVariables = (details) => {
-    const variableString = (
-        details.storeFieldName.match(/\((.+)\)/)?.[1]
-        || details.storeFieldName.match(/:(.+)/)?.[1]
-    );
-
-    return variableString ? JSON.parse(variableString) : null;
-};
+import { extractVariablesFromFieldName } from './fieldNames';
 
 // A helper that adds/removes a cache object to/from an array, depending on whether the handler
 // returns true or false. Reduces overhead.
@@ -54,7 +44,7 @@ const augmentFields = (cache, cacheObject, item, fields) => {
             previous,
             item,
             itemRef: details.toReference(item),
-            variables: getVariables(details),
+            variables: extractVariablesFromFieldName(details.storeFieldName),
             includeIf: handleIncludeIf(cache, item, previous, details),
             cacheObject,
         });

@@ -1,26 +1,5 @@
-import stringify from 'json-stable-stringify';
 import { getKeyFields } from './keyFields';
-
-const buildFieldName = (selection, variables) => {
-    if (!selection.arguments?.length) {
-        return selection.name.value;
-    }
-
-    const args = selection.arguments.reduce((result, { name, value }) => ({
-        ...result,
-        // Handle both inline and external veriables
-        [name.value]: value.value || variables?.[value.name.value],
-    }), {});
-
-    // The field names in apollo's in-memory-cache are built like this:
-    //
-    // someField
-    // someField({"someParam":"someValue"})
-    //
-    // If there are multiple arguments, they are sorted alphabetically, which is why we use
-    // json-stable-stringify here (which guarantees alphabetical order).
-    return `${selection.name.value}(${stringify(args)})`;
-};
+import { buildFieldName } from './fieldNames';
 
 // cacheObjectOrRef may contain either the actual cache object or a reference to it. In the latter
 // case, this function returns the actual cache object that is being referenced.
