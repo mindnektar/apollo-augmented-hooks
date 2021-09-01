@@ -52,14 +52,13 @@ const maybeInflate = (cache, cacheContents, aliases, item, typenamePath, cacheKe
         return inflate(cache, cacheContents, aliases, cacheItem, typenamePath, cacheKeyCache);
     }
 
-    // Avoid infinite loops by keeping track of which cacheKey we've already seen.
-    if (cacheKeyCache.includes(cacheKey)) {
+    // Avoid infinite loops by keeping track of which cacheKey we've already seen. Once a cache key is seen twice, stop inflation.
+    if (cacheKeyCache.filter((what) => what === cacheKey).length >= 2) {
         return buildLeaf(cache, cacheItem, cacheKey);
     }
 
-    const itemCacheKey = `${cacheKey}:${typenamePath.join('.')}`;
-
-    if (!itemCache[itemCacheKey]) {
+    // Cache inflation can take a long time with large amounts of data, so don't inflate the same thing twice.
+    if (!itemCache[cacheKey]) {
         // Include both the regular field name and the alias in the object.
         const cacheItemWithAliases = Object.entries(cacheItem).reduce((result, [fieldName, value]) => ({
             ...result,
@@ -67,7 +66,7 @@ const maybeInflate = (cache, cacheContents, aliases, item, typenamePath, cacheKe
             [aliases[fieldName] || fieldName]: value,
         }), {});
 
-        itemCache[itemCacheKey] = inflate(
+        itemCache[cacheKey] = inflate(
             cache,
             cacheContents,
             aliases,
@@ -77,7 +76,7 @@ const maybeInflate = (cache, cacheContents, aliases, item, typenamePath, cacheKe
         );
     }
 
-    return itemCache[itemCacheKey];
+    return itemCache[cacheKey];
 };
 
 // Iterate through all the fields of a selection set and check whether any of them can be inflated.

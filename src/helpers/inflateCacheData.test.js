@@ -152,6 +152,19 @@ it('includes every field of a sub selection even if it was already seen in the t
                         conversation: {
                             __typename: 'Conversation',
                             id: 'some-conversation-id',
+                            latestMessage: {
+                                __typename: 'Message',
+                                id: 'some-message-id-2',
+                                name: 'foo',
+                                conversation: {
+                                    __typename: 'Conversation',
+                                    id: 'some-conversation-id',
+                                },
+                            },
+                            communication: {
+                                __typename: 'Communication',
+                                id: 'some-communication-id',
+                            },
                         },
                     },
                     communication: {
@@ -196,6 +209,19 @@ it('includes every field of a sub selection even if it was already seen in the t
                 conversation: {
                     __typename: 'Conversation',
                     id: 'some-conversation-id',
+                    latestMessage: {
+                        __typename: 'Message',
+                        id: 'some-message-id-2',
+                        name: 'foo',
+                        conversation: {
+                            __typename: 'Conversation',
+                            id: 'some-conversation-id',
+                        },
+                    },
+                    communication: {
+                        __typename: 'Communication',
+                        id: 'some-communication-id',
+                    },
                 },
             },
             communication: {
@@ -270,6 +296,16 @@ it('avoids infinite loops', () => {
                 todos: [{
                     __typename: 'Todo',
                     id: 'some-id',
+                    title: 'some-title',
+                    users: [{
+                        __typename: 'User',
+                        id: 'some-id-2',
+                        name: 'some-name',
+                        todos: [{
+                            __typename: 'Todo',
+                            id: 'some-id',
+                        }],
+                    }],
                 }],
             }],
         }],
@@ -284,6 +320,11 @@ it('avoids infinite loops', () => {
                 users: [{
                     __typename: 'User',
                     id: 'some-id-2',
+                    name: 'some-name',
+                    todos: [{
+                        __typename: 'Todo',
+                        id: 'some-id',
+                    }],
                 }],
             }],
         }],
