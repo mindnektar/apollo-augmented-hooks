@@ -155,11 +155,6 @@ it('includes every field of a sub selection even if it was already seen in the t
                             latestMessage: {
                                 __typename: 'Message',
                                 id: 'some-message-id-2',
-                                name: 'foo',
-                                conversation: {
-                                    __typename: 'Conversation',
-                                    id: 'some-conversation-id',
-                                },
                             },
                             communication: {
                                 __typename: 'Communication',
@@ -186,11 +181,6 @@ it('includes every field of a sub selection even if it was already seen in the t
                     latestMessage: {
                         __typename: 'Message',
                         id: 'some-message-id-2',
-                        name: 'foo',
-                        conversation: {
-                            __typename: 'Conversation',
-                            id: 'some-conversation-id',
-                        },
                     },
                     communication: {
                         __typename: 'Communication',
@@ -212,11 +202,6 @@ it('includes every field of a sub selection even if it was already seen in the t
                     latestMessage: {
                         __typename: 'Message',
                         id: 'some-message-id-2',
-                        name: 'foo',
-                        conversation: {
-                            __typename: 'Conversation',
-                            id: 'some-conversation-id',
-                        },
                     },
                     communication: {
                         __typename: 'Communication',
@@ -300,11 +285,6 @@ it('avoids infinite loops', () => {
                     users: [{
                         __typename: 'User',
                         id: 'some-id-2',
-                        name: 'some-name',
-                        todos: [{
-                            __typename: 'Todo',
-                            id: 'some-id',
-                        }],
                     }],
                 }],
             }],
@@ -320,11 +300,6 @@ it('avoids infinite loops', () => {
                 users: [{
                     __typename: 'User',
                     id: 'some-id-2',
-                    name: 'some-name',
-                    todos: [{
-                        __typename: 'Todo',
-                        id: 'some-id',
-                    }],
                 }],
             }],
         }],
