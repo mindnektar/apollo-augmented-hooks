@@ -33,9 +33,9 @@ const buildLeaf = (cache, cacheItem, cacheKey) => {
     return leafCache[cacheKey];
 };
 
-const hasDuplicateCacheKeySubPaths = (cacheKeyPath, cacheKey) => {
-    const subPaths = cacheKeyPath.reduce((result, key, index) => {
-        if (cacheKeyPath[index - 1] === cacheKey) {
+const hasDuplicateTypenameSubPaths = (typenamePath, cacheKey) => {
+    const subPaths = typenamePath.reduce((result, key, index) => {
+        if (typenamePath[index - 1] === cacheKey) {
             result.push('');
         }
 
@@ -50,7 +50,7 @@ const hasDuplicateCacheKeySubPaths = (cacheKeyPath, cacheKey) => {
     return subPaths[subPaths.length - 1] === subPaths[subPaths.length - 2];
 };
 
-const maybeInflate = (cache, cacheContents, aliases, item, cacheKeyPath, itemCache) => {
+const maybeInflate = (cache, cacheContents, aliases, item, typenamePath, itemCache) => {
     if (!item || typeof item !== 'object') {
         return item;
     }
@@ -65,12 +65,12 @@ const maybeInflate = (cache, cacheContents, aliases, item, cacheKeyPath, itemCac
 
     // If the item can't be found in the cache, any of the fields it references still might, though, so we have to go deeper.
     if (!cacheKey) {
-        return inflate(cache, cacheContents, aliases, cacheItem, cacheKeyPath, itemCache);
+        return inflate(cache, cacheContents, aliases, cacheItem, typenamePath, itemCache);
     }
 
     // Avoid infinite loops by keeping track of which cacheKey we've already seen. Stop cache inflation once a cacheKey has taken the same
     // sub path through the cache twice.
-    if (hasDuplicateCacheKeySubPaths(cacheKeyPath, cacheKey)) {
+    if (hasDuplicateTypenameSubPaths(typenamePath, cacheItem.__typename)) {
         return buildLeaf(cache, cacheItem, cacheKey);
     }
 
@@ -88,7 +88,7 @@ const maybeInflate = (cache, cacheContents, aliases, item, cacheKeyPath, itemCac
             cacheContents,
             aliases,
             cacheItemWithAliases,
-            [...cacheKeyPath, cacheKey],
+            [...typenamePath, cacheItem.__typename],
             itemCache
         );
     }
@@ -97,7 +97,7 @@ const maybeInflate = (cache, cacheContents, aliases, item, cacheKeyPath, itemCac
 };
 
 // Iterate through all the fields of a selection set and check whether any of them can be inflated.
-const inflate = (cache, cacheContents, aliases, data, cacheKeyPath, itemCache) => (
+const inflate = (cache, cacheContents, aliases, data, typenamePath, itemCache) => (
     Object.entries(data).reduce((result, [key, item]) => {
         const fieldName = getFieldName(key);
 
@@ -105,7 +105,7 @@ const inflate = (cache, cacheContents, aliases, data, cacheKeyPath, itemCache) =
             return {
                 ...result,
                 [fieldName]: item.reduce((itemResult, entry) => {
-                    const inflatedEntry = maybeInflate(cache, cacheContents, aliases, entry, cacheKeyPath, itemCache);
+                    const inflatedEntry = maybeInflate(cache, cacheContents, aliases, entry, typenamePath, itemCache);
 
                     if (inflatedEntry === undefined) {
                         return itemResult;
@@ -119,7 +119,7 @@ const inflate = (cache, cacheContents, aliases, data, cacheKeyPath, itemCache) =
         if (typeof item === 'object') {
             return {
                 ...result,
-                [fieldName]: maybeInflate(cache, cacheContents, aliases, item, cacheKeyPath, itemCache),
+                [fieldName]: maybeInflate(cache, cacheContents, aliases, item, typenamePath, itemCache),
             };
         }
 
