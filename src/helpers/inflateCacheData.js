@@ -47,7 +47,9 @@ const hasDuplicateTypenameSubPaths = (typenamePath, cacheKey) => {
 
     subPaths[subPaths.length - 1] = `${subPaths[subPaths.length - 1]}.${cacheKey}`;
 
-    return subPaths[subPaths.length - 1] === subPaths[subPaths.length - 2];
+    const lastSubPath = subPaths.pop();
+
+    return subPaths.includes(lastSubPath);
 };
 
 const maybeInflate = (cache, cacheContents, aliases, item, typenamePath, itemCache) => {
