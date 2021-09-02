@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
-import inflateCacheData from '../helpers/inflateCacheData';
 import apolloClient from '../apolloClient';
+import mapData from '../helpers/mapData';
 
 export default (queryAst, variables, options) => {
     const client = apolloClient();
@@ -13,18 +12,5 @@ export default (queryAst, variables, options) => {
         fetchPolicy: 'cache-only',
     });
 
-    const getInflatedCacheData = () => (
-        options.inflateCacheData !== false
-            // This makes sure that every requested field always contains the entire cache item, and not just the requested sub selection.
-            ? inflateCacheData(client.cache, cacheResult.data, queryAst, variables)
-            : cacheResult.data
-    );
-
-    const [inflatedCacheData, setInflatedCacheData] = useState(() => getInflatedCacheData());
-
-    useEffect(() => {
-        setInflatedCacheData(getInflatedCacheData());
-    }, [JSON.stringify(cacheResult.data)]);
-
-    return inflatedCacheData;
+    return mapData(cacheResult.data, options.dataMap);
 };

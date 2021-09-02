@@ -8,7 +8,7 @@ Drop-in replacements for [@apollo/client](https://github.com/apollographql/apoll
 
 - It attempts to make complex cache modification as painless as possible by providing additional helpers to `cache.modify` calls. See [this guide on caching](CACHING.md) for more information.
 - It improves performance by automatically reducing the size of queries sent to the server by stripping all the fields from them that are already in the cache. See [this guide on reduced queries](REDUCED_QUERIES.md) for more information.
-- It also improves performance by automatically adding all fields available in the cache to each requested selection, allowing for smaller queries to be written. See [this guide on cache inflation](CACHE_INFLATION.md) for more information.
+- It allows for smaller queries to be written by passing a data map to `useQuery`. See [this guide on data mapping](DATA_MAPPING.md) for more information.
 - It allows you to globally provide context data for all queries and mutations using a hook.
 - It fixes a race condition causing cache updates with stale data when simultaneously performing mutations and poll requests.
 
@@ -45,9 +45,9 @@ initAugmentedHooks(client);
 
 Default: `true`. Set to `false` if you wish to disable the query reduction functionality. See [this guide on reduced queries](REDUCED_QUERIES.md) for more information.
 
-#### - inflateCacheData
+#### - dataMap
 
-Default: `true`. Set to `false` if you wish to disable the cache inflation functionality. See [this guide on cache inflation](CACHE_INFLATION.md) for more information.
+An object telling `useQuery` which parts of the response data should be mapped to other parts. See [this guide on data mapping](DATA_MAPPING.md) for more information.
 
 #### - pagination
 
@@ -218,7 +218,7 @@ mutate({
 });
 ```
 
-You can pass a second parameter to `includeIf` that allows you to specify exactly what subjects you'd like to add to the field (if you don't want to add your mutation's result directly) and what the field's original value should be (if you don't want the field's previous value to be used): `includeIf(true, { subjects: [thingA, thingB], origin: [] })` 
+You can pass a second parameter to `includeIf` that allows you to specify exactly what subjects you'd like to add to the field (if you don't want to add your mutation's result directly) and what the field's original value should be (if you don't want the field's previous value to be used): `includeIf(true, { subjects: [thingA, thingB], origin: [] })`
 
 ##### newFields
 
@@ -274,10 +274,6 @@ mutate({
 ##### evict
 
 If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`.
-
-#### - inflateCacheData
-
-Default: `true`. Set to `false` if you wish to disable the cache inflation functionality. See [this guide on cache inflation](CACHE_INFLATION.md) for more information.
 
 ### useSubscription
 
