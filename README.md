@@ -220,6 +220,24 @@ mutate({
 
 You can pass a second parameter to `includeIf` that allows you to specify exactly what subjects you'd like to add to the field (if you don't want to add your mutation's result directly) and what the field's original value should be (if you don't want the field's previous value to be used): `includeIf(true, { subjects: [thingA, thingB], origin: [] })`
 
+###### *setIf*
+
+`setIf` works just like `includeIf` but should be used for objects rather than arrays:
+
+```js
+mutate({
+    input: someInput,
+    modifiers: [{
+        cacheObject: someObject,
+        fields: {
+            thing: ({ setIf }) => (
+                setIf(true)
+            ),
+        },
+    }],
+});
+```
+
 ##### newFields
 
 Sometimes you might want to add fields to cache objects that do not exist yet in order to avoid another server roundtrip to fetch data that your mutation already provides. `cache.modify` can't do that (as the name suggests, you can only modify existing fields), and `cache.writeQuery` is very verbose, so `newFields` provides a compact way to accomplish it. It has essentially the same API as `fields`, but the only available helpers are `cacheObject`, `item`, `itemRef` and `toReference`. Since there is no previous data (as we're adding a new field), many of the helpers necessary for `fields` are obsolete here.

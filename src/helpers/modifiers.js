@@ -2,6 +2,8 @@ import stringify from 'json-stable-stringify';
 import { keyFieldsForTypeName } from './keyFields';
 import { extractVariablesFromFieldName } from './fieldNames';
 
+let shouldResetReducedQueries = false;
+
 // A helper that adds/removes a cache object to/from an array, depending on whether the handler
 // returns true or false. Reduces overhead.
 const handleIncludeIf = (cache, item, previous, details) => (
@@ -17,7 +19,7 @@ const handleIncludeIf = (cache, item, previous, details) => (
         const next = origin.filter((ref) => (
             subjects.some((subject) => (
                 !keyFields.every((keyField) => (
-                    details.readField(keyField, ref) === subject[keyField]
+                    details.readField(keyField, ref) === details.readField(keyField, subject)
                 ))
             ))
         ));
@@ -34,18 +36,38 @@ const handleIncludeIf = (cache, item, previous, details) => (
     }
 );
 
-let shouldResetReducedQueries = false;
+const handleSetIf = (cache, item, itemRef, previous, details) => (
+    (condition, options = {}) => {
+        if (condition) {
+            return itemRef;
+        }
+
+        const subject = options.subject || item;
+
+        if (!subject) {
+            return previous;
+        }
+
+        const keyFields = keyFieldsForTypeName(cache, subject.__typename);
+
+        return keyFields.every((keyField) => details.readField(keyField, previous) === details.readField(keyField, subject))
+            ? null
+            : previous;
+    }
+);
 
 const augmentFields = (cache, cacheObject, item, fields) => {
     const modify = (callback, previous, details) => {
         // Attach a couple additional helpers to apollo's standard details object.
+        const itemRef = details.toReference(item);
         const callbackResult = callback({
             ...details,
             previous,
             item,
-            itemRef: details.toReference(item),
+            itemRef,
             variables: extractVariablesFromFieldName(details.storeFieldName),
             includeIf: handleIncludeIf(cache, item, previous, details),
+            setIf: handleSetIf(cache, item, itemRef, previous, details),
             cacheObject,
         });
 
