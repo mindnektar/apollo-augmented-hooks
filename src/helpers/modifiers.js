@@ -4,6 +4,25 @@ import { extractVariablesFromFieldName } from './fieldNames';
 
 let shouldResetReducedQueries = false;
 
+const areCacheObjectsEqual = (refA, refB, keyFields, readField) => (
+    keyFields.every((keyField, index) => {
+        if (Array.isArray(keyField)) {
+            return areCacheObjectsEqual(
+                readField(keyFields[index - 1], refA),
+                readField(keyFields[index - 1], refB),
+                keyField,
+                readField,
+            );
+        }
+
+        if (Array.isArray(keyFields[index + 1])) {
+            return true;
+        }
+
+        return readField(keyField, refA) === readField(keyField, refB);
+    })
+);
+
 // A helper that adds/removes a cache object to/from an array, depending on whether the handler
 // returns true or false. Reduces overhead.
 const handleIncludeIf = (cache, item, previous, details) => (
@@ -18,9 +37,7 @@ const handleIncludeIf = (cache, item, previous, details) => (
         const keyFields = keyFieldsForTypeName(cache, subjects[0].__typename);
         const next = origin.filter((ref) => (
             subjects.some((subject) => (
-                !keyFields.every((keyField) => (
-                    details.readField(keyField, ref) === details.readField(keyField, subject)
-                ))
+                !areCacheObjectsEqual(ref, subject, keyFields, details.readField)
             ))
         ));
 
