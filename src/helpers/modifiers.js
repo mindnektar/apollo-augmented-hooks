@@ -119,7 +119,13 @@ const getCacheIds = (cache, cacheData, item, cacheObject, typename) => {
 
     if (cacheObject) {
         if (typeof cacheObject === 'function') {
-            return [cache.identify(cacheObject(item))];
+            const result = cacheObject(item);
+
+            if (!result) {
+                return [];
+            }
+
+            return [cache.identify(result)];
         }
 
         return [cache.identify(cacheObject)];

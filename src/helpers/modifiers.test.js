@@ -412,3 +412,46 @@ it('excludes an item with nested custom key fields if the parameter is false and
 
     expect(received).toEqual(expected);
 });
+
+it('does nothing if the cache object is nullish', () => {
+    const query = gql`
+        query {
+            thing {
+                id
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query,
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+            },
+        },
+    });
+
+    const item = {
+        __typename: 'Thing',
+        id: 'some-id-2',
+    };
+    const modifiers = [{
+        cacheObject: () => null,
+        fields: {
+            id: () => 'some-id-2',
+        },
+    }];
+
+    handleModifiers(cache, item, modifiers);
+
+    const received = cache.readQuery({ query });
+    const expected = {
+        thing: {
+            __typename: 'Thing',
+            id: 'some-id',
+        },
+    };
+
+    expect(received).toEqual(expected);
+});
