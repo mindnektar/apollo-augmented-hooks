@@ -513,7 +513,9 @@ update: (cache, mutationResult) => {
 }
 ```
 
-The modifier function's second parameter includes an undocumented helper function called `toReference`, which essentially does the same thing as the entire `cache.writeFragment` block above. It's much easier to use and produces cleaner and more maintainable code. I am not aware of any reason to use `cache.writeFragment` in favour of this.
+The modifier function's second parameter includes an undocumented but quite official helper function called `toReference`. The key difference between it and `cache.writeFragment` is that the former only returns a ref to an already present cache object, while the latter writes an object to the cache and *then* returns its ref. Luckily, `ApolloClient` calls `cache.writeFragment` internally after every mutation response or subscription message, so there is no need for us to do it ourselves. We can always rely on the `useMutation` and `useSubscription` results to end up in the cache automatically, so `toReference` is all we're ever going to need. It's much easier to use and produces cleaner and more maintainable code.
+
+The only time you're ever going to have to use `cache.writeFragment` yourself is when you're calling `cache.modify` in isolation, meaning you're outside the context of a mutation response or a subscription message and have to ensure an object's presence in the cache yourself before referencing it elsewhere within the cache.
 
 ## How do I handle parameterized queries? 
 
