@@ -1,10 +1,20 @@
 import { useRef, useEffect } from 'react';
-import { gql } from '@apollo/client';
+import { DocumentNode, gql, QueryHookOptions, QueryResult } from '@apollo/client';
 import { getVariablesWithPagination, handleNextPage } from './helpers/pagination';
 import useReducedQuery from './hooks/useReducedQuery';
 import useCacheQuery from './hooks/useCacheQuery';
 
-export default (query, options = {}) => {
+interface AugmentedQueryHookOptions extends QueryHookOptions {
+    reducedQuery: boolean,
+    dataMap: any,
+    pagination: any,
+}
+
+interface AugmentedQueryResult extends QueryResult {
+    nextPage: () => Promise<any>,
+}
+
+export default (query: DocumentNode | string, options: AugmentedQueryHookOptions): AugmentedQueryResult => {
     const queryAst = typeof query === 'string' ? gql(query) : query;
     const variables = getVariablesWithPagination(options);
     const reducedResult = useReducedQuery(queryAst, variables, options);
