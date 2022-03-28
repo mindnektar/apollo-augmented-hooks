@@ -4,7 +4,9 @@
   "description": "Drop-in replacements for @apollo/client's useQuery, useMutation and useSubscription hooks with reduced overhead and additional functionality.",
   "main": "lib/index.js",
   "scripts": {
-    "build": "node_modules/@babel/cli/bin/babel.js src --out-dir lib --ignore \"**/*.test.js\",\"**/*.test.jsx\"",
+    "build:babel": "node_modules/@babel/cli/bin/babel.js src --out-dir lib --ignore \"**/*.test.js\",\"**/*.test.jsx\" && tsc",
+    "build:types": "tsc",
+    "build": "npm run build:babel && npm run build:types",
     "test": "jest"
   },
   "babel": {
@@ -47,6 +49,8 @@
     "@babel/plugin-transform-runtime": "^7.14.5",
     "@babel/preset-env": "^7.13.9",
     "@babel/preset-react": "^7.12.13",
+    "@babel/preset-typescript": "^7.16.7",
+    "@types/react": "^17.0.43",
     "babel-eslint": "^10.1.0",
     "eslint": "^7.21.0",
     "eslint-config-airbnb": "^18.2.1",
@@ -56,6 +60,7 @@
     "eslint-plugin-react": "^7.22.0",
     "graphql": "^15.5.1",
     "jest": "^26.6.3",
-    "react": "^17.0.2"
+    "react": "^17.0.2",
+    "typescript": "^4.6.3"
   }
 }
