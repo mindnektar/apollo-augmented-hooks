@@ -9,14 +9,14 @@ export default (mutation, hookOptions = {}) => {
     const client = apolloClient();
     const mutationAst = typeof mutation === 'string' ? gql(mutation) : mutation;
     const mutationName = mutationAst.definitions[0].selectionSet.selections[0].name.value;
-    const [mutate] = useMutation(mutationAst, {
+    const [mutate, ...mutationResult] = useMutation(mutationAst, {
         ...hookOptions,
         client,
     });
     const args = mutationAst.definitions[0].selectionSet.selections[0].arguments;
     const globalContext = useGlobalContext();
 
-    return ({ input, ...options } = {}) => {
+    const augmentedMutate = ({ input, ...options } = {}) => {
         // Automatically prepend the argument name when there's only a single argument, which is
         // most of the time ($input or $id), reducing overhead.
         const variables = args.length === 1 ? { [args[0].name.value]: input } : input;
@@ -53,4 +53,6 @@ export default (mutation, hookOptions = {}) => {
             },
         });
     };
+
+    return [augmentedMutate, ...mutationResult];
 };

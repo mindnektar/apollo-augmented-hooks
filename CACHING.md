@@ -517,7 +517,7 @@ The modifier function's second parameter includes an undocumented but quite offi
 
 The only time you're ever going to have to use `cache.writeFragment` yourself is when you're calling `cache.modify` in isolation, meaning you're outside the context of a mutation response or a subscription message and have to ensure an object's presence in the cache yourself before referencing it elsewhere within the cache.
 
-## How do I handle parameterized queries? 
+## How do I handle parameterized queries?
 
 Before we take a look at how cache modification works with `apollo-augmented-hooks`, let's cover a slightly more complex example that you have to deal with all the time in real-world applications, but for which there exists no official solution at the time I'm writing this.
 
@@ -652,7 +652,7 @@ const mutation = `
 `;
 
 export default () => {
-    const mutate = useMutation(mutation);
+    const [mutate] = useMutation(mutation);
 
     return () => (
         mutate({
@@ -666,7 +666,6 @@ export default () => {
 
 1. We import `useMutation` from `apollo-augmented-hooks`, not from `@apollo/client`.
 1. We don't need `gql` to transform the graphql string into an abstract syntax tree - this is done internally by `useMutation` (though you can still manually wrap the string in `gql`, if you wish).
-1. `useMutation` doesn't return a tuple, the first element of which is the mutate function - instead, it only returns the mutate function (so you can omit the brackets).
 1. Rather than passing an `update` function to the mutate call, you pass a `modifiers` array.
 
 Let's take a look at how we can modify the cache in our example using the `modifiers` array.
@@ -1028,7 +1027,7 @@ const mutation = `
 `;
 
 export default (user) => {
-    const mutate = useMutation(mutation);
+    const [mutate] = useMutation(mutation);
     // Hard-coded input for simplicity
     const input = {
         id: 'bd21e369-5aa6-4cdd-ad3f-d82c9a829fa3',
@@ -1045,7 +1044,7 @@ export default (user) => {
             ]
         })
     );
-}
+};
 ```
 
 After the mutation is done, we're of course leveraging Apollo's automatic cache updates again. `updateCategory` returns the `id` and `__typename` of a `Category` object, and because it is already in the cache, Apollo knows to update it with the server response:
@@ -1165,7 +1164,7 @@ export default () => {
             }
         })
     );
-}
+};
 ```
 
 This works, but as I'm not a huge fan of the verbosity of cache updates using graphql queries and I prefer using the same API for similar things, I've added the `newFields` option to `apollo-augmented-hooks`' `modifiers`, and since it is used essentially just like the already familiar `fields` option, the solution becomes quite straightforward:
@@ -1187,7 +1186,7 @@ const mutation = `
 `;
 
 export default () => {
-    const mutate = useMutation(mutation);
+    const [mutate] = useMutation(mutation);
 
     return () => (
         mutate({
@@ -1200,5 +1199,5 @@ export default () => {
             }]
         })
     );
-}
+};
 ```

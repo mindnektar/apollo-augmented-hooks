@@ -60,7 +60,7 @@ Re-export of [@apollo/client](https://www.apollographql.com/docs/react/api/react
 
 ### useMutation
 
-`useMutation` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usemutation) counterpart. However, it does not return a tuple of the mutation function and the mutation result, but just the mutation function, since the result can easily be accessed from the mutation's resolved promise. Additionally, the mutation function supports the following new options:
+`useMutation` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usemutation) counterpart. Additionally, the mutation function supports the following new options:
 
 #### - input
 
