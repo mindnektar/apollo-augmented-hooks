@@ -11,16 +11,28 @@ export const extractVariablesFromFieldName = (fieldName) => {
     return variableString ? JSON.parse(variableString) : null;
 };
 
+const reduceArgs = (args, variables) => (
+    args.reduce((result, { name, value }) => {
+        if (value.kind === 'ObjectValue') {
+            return { ...result, [name.value]: reduceArgs(value.fields, variables) };
+        }
+
+        const realValue = value.value || variables?.[value.name.value];
+
+        return {
+            ...result,
+            // Handle both inline and external variables
+            [name.value]: value.kind === 'IntValue' ? parseInt(realValue, 10) : realValue,
+        };
+    }, {})
+);
+
 export const buildFieldName = (selection, variables) => {
     if (!selection.arguments?.length) {
         return selection.name.value;
     }
 
-    const args = selection.arguments.reduce((result, { name, value }) => ({
-        ...result,
-        // Handle both inline and external veriables
-        [name.value]: value.value || variables?.[value.name.value],
-    }), {});
+    const args = reduceArgs(selection.arguments, variables);
 
     // The field names in apollo's in-memory-cache are built like this:
     //

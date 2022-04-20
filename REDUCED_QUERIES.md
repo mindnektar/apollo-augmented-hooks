@@ -77,4 +77,6 @@ query {
 
 Depending on how many shared selection sets there are in your application's queries, you can potentially save a lot of server resources using this method.
 
-If you ever need to disable this functionality, you can pass the option `reducedQuery: false` to `useQuery`. This might for example be necessary if you're using fragments in your queries, because they are not supported (yet).
+If you use fragments in your queries, they will be kept as they are, no matter if the fields within the fragment are already present in the cache.
+
+If you ever need to disable this functionality, you can pass the option `reducedQuery: false` to `useQuery`.
