@@ -139,7 +139,7 @@ const hasVariable = (selectionSet, variable) => (
         const isVariableInArguments = selection.arguments.some(({ value }) => (
             value?.name?.value === variable
         ));
-        const isVariableInDirectives = selection.directives.some((directive) => (
+        const isVariableInDirectives = (selection.directives || []).some((directive) => (
             directive.arguments.some(({ value }) => value?.name?.value === variable)
         ));
         const isVariableInSelectionSet = hasVariable(selection.selectionSet, variable);
