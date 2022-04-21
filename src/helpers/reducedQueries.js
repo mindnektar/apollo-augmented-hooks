@@ -136,11 +136,11 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, v
 
 const hasVariable = (selectionSet, variable) => (
     (selectionSet?.selections || []).some((selection) => {
-        const isVariableInArguments = selection.arguments.some(({ value }) => (
+        const isVariableInArguments = (selection.arguments || []).some(({ value }) => (
             value?.name?.value === variable
         ));
         const isVariableInDirectives = (selection.directives || []).some((directive) => (
-            directive.arguments.some(({ value }) => value?.name?.value === variable)
+            (directive.arguments || []).some(({ value }) => value?.name?.value === variable)
         ));
         const isVariableInSelectionSet = hasVariable(selection.selectionSet, variable);
 
