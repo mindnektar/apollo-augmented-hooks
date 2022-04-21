@@ -900,6 +900,70 @@ it('keeps the variable definition if it is used in directives', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('works with nested inline variables', () => {
+    const queryInCache = `
+        query {
+            thing {
+                id
+                withNestedVariables(
+                    input: {first: 1}
+                    filter: {happening: Future}
+                    sort: ASC
+                ) {
+                    id
+                    name
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing {
+                id
+                withNestedVariables(
+                    input: {first: 1}
+                    filter: {happening: Future}
+                    sort: ASC
+                ) {
+                    id
+                    name
+                    type
+                }
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+                withNestedVariables(input: {first: 1}, filter: {happening: Future}, sort: ASC) {
+                    id
+                    type
+                }
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+                withNestedVariables: {
+                    __typename: 'WithNestedVariables',
+                    id: 'some-id-2',
+                    name: 'some-name',
+                },
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('removes fields if they are in the cache but have no id', () => {
     const queryInCache = `
         query {
@@ -1169,70 +1233,6 @@ it('removes fields if they are already in the cache when using key fields', () =
     compare(reducedQueryAst, actualQuery);
 });
 
-it('works with nested inline variables', () => {
-    const queryInCache = `
-        query {
-            thing {
-                id
-                withNestedVariables(
-                    input: {first: 1}
-                    filter: {happening: Future}
-                    sort: ASC
-                ) {
-                    id
-                    name
-                }
-            }
-        }
-    `;
-    const requestedQuery = `
-        query {
-            thing {
-                id
-                withNestedVariables(
-                    input: {first: 1}
-                    filter: {happening: Future}
-                    sort: ASC
-                ) {
-                    id
-                    name
-                    type
-                }
-            }
-        }
-    `;
-    const actualQuery = `
-        query __REDUCED__ {
-            thing {
-                id
-                withNestedVariables(input: {first: 1}, filter: {happening: Future}, sort: ASC) {
-                    id
-                    type
-                }
-            }
-        }
-    `;
-
-    cache.writeQuery({
-        query: gql(queryInCache),
-        data: {
-            thing: {
-                __typename: 'Thing',
-                id: 'some-id',
-                withNestedVariables: {
-                    __typename: 'WithNestedVariables',
-                    id: 'some-id-2',
-                    name: 'some-name',
-                },
-            },
-        },
-    });
-
-    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
-
-    compare(reducedQueryAst, actualQuery);
-});
-
 it('ignores fragments', () => {
     const queryInCache = `
         query {
@@ -1274,6 +1274,58 @@ it('ignores fragments', () => {
     });
 
     const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('keeps variables if there are fragments', () => {
+    const queryInCache = `
+        query test($variableA: String, $variableB: String) {
+            thing(variableA: $variableA) {
+                id
+                subThing(variableB: $variableB) {
+                    id
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query test($variableA: String, $variableB: String) {
+            thing(variableA: $variableA) {
+                id
+                ...SomeFragment
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__test($variableA: String, $variableB: String) {
+            thing(variableA: $variableA) {
+                id
+                ...SomeFragment
+            }
+        }
+    `;
+    const variables = {
+        variableA: 'a',
+        variableB: 'b',
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+                subThing: {
+                    __typename: 'Thing',
+                    id: 'some-id-2',
+                },
+            },
+        },
+        variables,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), variables);
 
     compare(reducedQueryAst, actualQuery);
 });

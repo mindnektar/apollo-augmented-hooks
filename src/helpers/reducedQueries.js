@@ -136,6 +136,10 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, v
 
 const hasVariable = (selectionSet, variable) => (
     (selectionSet?.selections || []).some((selection) => {
+        if (selection.kind !== 'Field') {
+            return true;
+        }
+
         const isVariableInArguments = selection.arguments.some(({ value }) => (
             value?.name?.value === variable
         ));
