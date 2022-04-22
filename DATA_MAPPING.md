@@ -31,7 +31,7 @@ query {
 
 In this query, we are requesting todos in two different places and even include a sub selection in both places (image). Depending on how your server is implemented, this might cause unnecessary database queries, which can have quite the performance impact in large GraphQL queries and/or with a large amount of data in the database.
 
-One way to alleviate this problem would be only request the duplicate data once and manually reference the missing the data:
+One way to alleviate this problem would be to only request the duplicate data once and manually reference the missing the data:
 
 ```graphql
 query {
@@ -64,7 +64,7 @@ const users = data.users.map((user) => ({
 }));
 ```
 
-This slims the query down a bit but causes some overhead in the code. This is where data mapping comes in. `apollo-augmented-hooks`'s `useQuery` contains an option to specify exactly how one part of the data is supposed to reference another part:
+This slims the query down a bit but causes some overhead in the code, which is where data mapping comes in. `apollo-augmented-hooks`'s `useQuery` contains an option to specify exactly how one part of the data is supposed to reference another part:
 
 ```javascript
 useQuery(query, {
