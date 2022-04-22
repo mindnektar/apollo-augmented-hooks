@@ -900,6 +900,53 @@ it('keeps the variable definition if it is used in directives', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('keeps the variable definition if it is used in nested variables', () => {
+    const queryInCache = `
+        query test($variable: Boolean) {
+            things(input: {variable: $variable}) {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query test($variable: Boolean) {
+            things(input: {variable: $variable}) {
+                id
+                name
+                value
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__test($variable: Boolean) {
+            things(input: {variable: $variable}) {
+                id
+                value
+            }
+        }
+    `;
+    const variables = {
+        variable: true,
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                __typename: 'Thing',
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+        variables,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), variables);
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('works with nested inline variables', () => {
     const queryInCache = `
         query {

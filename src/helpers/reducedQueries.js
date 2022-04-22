@@ -134,15 +134,23 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, v
     ];
 };
 
+const hasArgumentVariable = (args, variable) => (
+    args.some((argument) => {
+        if (argument.value?.fields) {
+            return hasArgumentVariable(argument.value.fields, variable);
+        }
+
+        return argument.value?.name?.value === variable;
+    })
+);
+
 const hasVariable = (selectionSet, variable) => (
     (selectionSet?.selections || []).some((selection) => {
         if (selection.kind !== 'Field') {
             return true;
         }
 
-        const isVariableInArguments = selection.arguments.some(({ value }) => (
-            value?.name?.value === variable
-        ));
+        const isVariableInArguments = hasArgumentVariable(selection.arguments, variable);
         const isVariableInDirectives = selection.directives.some((directive) => (
             directive.arguments.some(({ value }) => value?.name?.value === variable)
         ));
