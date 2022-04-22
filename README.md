@@ -300,7 +300,7 @@ If the cache object(s) of your modifier should be removed from the cache entirel
 
 #### - modifiers
 
-Works exactly the same as its [useMutation counterpart](#-modifiers);
+Works exactly the same as its [useMutation counterpart](#-modifiers).
 
 ### useSubscription
 
@@ -308,7 +308,7 @@ Works exactly the same as its [useMutation counterpart](#-modifiers);
 
 #### - modifiers
 
-Works exactly the same as its [useMutation counterpart](#-modifiers);
+Works exactly the same as its [useMutation counterpart](#-modifiers).
 
 ### combineResults
 
