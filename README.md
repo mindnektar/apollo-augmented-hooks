@@ -9,7 +9,7 @@ Drop-in replacements for [@apollo/client](https://github.com/apollographql/apoll
 - It attempts to make complex cache modification as painless as possible by providing additional helpers to `cache.modify` calls. See [this guide on caching](CACHING.md) for more information.
 - It improves performance by automatically reducing the size of queries sent to the server by stripping all the fields from them that are already in the cache. See [this guide on reduced queries](REDUCED_QUERIES.md) for more information.
 - It allows for smaller queries to be written by passing a data map to `useQuery`. See [this guide on data mapping](DATA_MAPPING.md) for more information.
-- It allows you to globally provide context data for all queries and mutations using a hook.
+- It allows you to globally provide context data for all queries and mutations using a hook. See [this guide on the global context hook](GLOBAL_CONTEXT_HOOK.md) for more information.
 - It allows you to omit the [`gql`](https://www.apollographql.com/docs/resources/graphql-glossary/#gql-function) wrapper function from all query strings.
 - It fixes a race condition causing cache updates with stale data when simultaneously performing mutations and poll requests.
 
@@ -53,10 +53,6 @@ An object telling `useQuery` which parts of the response data should be mapped t
 #### - pagination
 
 *Experimental and WIP.*
-
-### useLazyQuery
-
-Re-export of [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#uselazyquery).
 
 ### useMutation
 
@@ -298,6 +294,14 @@ mutate({
 
 If the cache object(s) of your modifier should be removed from the cache entirely, simply use `evict: true`.
 
+### useLazyQuery
+
+`useLazyQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#uselazyquery) counterpart. Additionally, the execute function supports the following new options:
+
+#### - modifiers
+
+Works exactly the same as its [useMutation counterpart](#-modifiers);
+
 ### useSubscription
 
 `useSubscription` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usesubscription) counterpart. Additionally, it supports the following new options:
@@ -321,7 +325,7 @@ export default () => {
 
 ### setGlobalContextHook
 
-*WIP*
+See [this guide on the global context hook](GLOBAL_CONTEXT_HOOK.md).
 
 ## Contributing
 

@@ -79,6 +79,12 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
             return [...result, selection];
         }
 
+        // Drop the selection if it is marked with the @client directive, since that means it's
+        // local-only.
+        if (selection.directives.some((directive) => directive.name.value === 'client')) {
+            return result;
+        }
+
         // The current field is not a leaf in the tree, so we may need to go deeper.
         if (selection.selectionSet) {
             // Gather all cache objects or refs of the next level in the tree. Ignore any null

@@ -1377,6 +1377,49 @@ it('keeps variables if there are fragments', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('always drops local-only fields', () => {
+    const queryInCache = `
+        query {
+            thing {
+                id
+                local @client
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing {
+                id
+                name
+                local @client
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+                name
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+                local: 'some-value',
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('has the expected result in a complex query', () => {
     const queryInCache = `
         query test($a: A, $b: B, $c: C) {
