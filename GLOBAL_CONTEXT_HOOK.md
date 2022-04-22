@@ -64,6 +64,7 @@ import { initAugmentedHooks, setGlobalContextHook } from 'apollo-augmented-hooks
 import useGlobalApolloContext from 'hooks/useGlobalApolloContext';
 
 const client = new ApolloClient({
+    ...
     setContext((request, context) => {
         // Retrieve the correct auth token using the now always available authType ...
         const token = getToken(context.authType);
@@ -77,6 +78,7 @@ const client = new ApolloClient({
             }
         };
     }),
+    ...
 });
 
 initAugmentedHooks(client);
