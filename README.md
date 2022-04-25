@@ -2,7 +2,7 @@
 
 # apollo-augmented-hooks
 
-Drop-in replacements for [@apollo/client](https://github.com/apollographql/apollo-client)'s `useQuery`, `useMutation` and `useSubscription` hooks with reduced overhead and additional functionality.
+Drop-in replacements for [@apollo/client](https://github.com/apollographql/apollo-client)'s `useQuery`, `useLazyQuery`, `useMutation` and `useSubscription` hooks with reduced overhead and additional functionality.
 
 ## What problems does this package solve?
 
