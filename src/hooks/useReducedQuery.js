@@ -5,15 +5,23 @@ import { registerRequest, deregisterRequest } from '../helpers/inFlightTracking'
 import apolloClient from '../apolloClient';
 import { useGlobalContext } from '../globalContextHook';
 
-// Create a reduced version of the query that contains only the fields that are not in the
-// cache already. Do not do this when polling, because polling implies the need for fresh data.
-// Also don't do it if the fetch policy is 'cache-only', because then we don't want to request
-// anything from the server anyway. Also provide the option to disable this behaviour.
-const getQueryAst = (queryAst, client, options) => (
-    options.pollInterval || options.fetchPolicy === 'cache-only' || options.reducedQuery === false
-        ? queryAst
-        : makeReducedQueryAst(client.cache, queryAst, options.variables)
-);
+// Create a reduced version of the query that contains only the fields that are not in the cache already.
+const getQueryAst = (queryAst, client, options) => {
+    if (
+        // Polling implies the need for fresh data.
+        options.pollInterval
+        // `cache-only` means we don't want to request anything from the server.
+        // `network-only` and `no-cache` imply that we always want to request everything from the server.
+        // In either scenario we need to keep the entire query.
+        || ['cache-only', 'network-only', 'no-cache'].includes(options.fetchPolicy)
+        // Also provide an explicit option to disable query reduction.
+        || options.reducedQuery === false
+    ) {
+        return queryAst;
+    }
+
+    return makeReducedQueryAst(client.cache, queryAst, options.variables);
+};
 
 export default (queryAst, variables, options) => {
     const client = apolloClient();
