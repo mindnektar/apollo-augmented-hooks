@@ -1,4 +1,4 @@
-import { DocumentNode, QueryHookOptions, QueryResult } from '@apollo/client';
+import { DocumentNode, OperationVariables, QueryHookOptions, QueryResult, TypedDocumentNode } from '@apollo/client';
 interface AugmentedQueryHookOptions extends QueryHookOptions {
     reducedQuery: boolean;
     dataMap: any;
@@ -7,5 +7,5 @@ interface AugmentedQueryHookOptions extends QueryHookOptions {
 interface AugmentedQueryResult extends QueryResult {
     nextPage: () => Promise<any>;
 }
-declare const _default: (query: DocumentNode | string, options: AugmentedQueryHookOptions) => AugmentedQueryResult;
-export default _default;
+export default function <TData = any, TVariables = OperationVariables>(query: DocumentNode | TypedDocumentNode<TData, TVariables> | string, options?: AugmentedQueryHookOptions): AugmentedQueryResult;
+export {};

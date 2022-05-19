@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { DocumentNode, gql, QueryHookOptions, QueryResult } from '@apollo/client';
+import { DocumentNode, gql, OperationVariables, QueryHookOptions, QueryResult, TypedDocumentNode } from '@apollo/client';
 import { getVariablesWithPagination, handleNextPage } from './helpers/pagination';
 import useReducedQuery from './hooks/useReducedQuery';
 import useCacheQuery from './hooks/useCacheQuery';
@@ -14,7 +14,10 @@ interface AugmentedQueryResult extends QueryResult {
     nextPage: () => Promise<any>,
 }
 
-export default (query: DocumentNode | string, options: AugmentedQueryHookOptions): AugmentedQueryResult => {
+export default function <TData = any, TVariables = OperationVariables> (
+    query: DocumentNode | TypedDocumentNode<TData, TVariables> | string,
+    options?: AugmentedQueryHookOptions
+): AugmentedQueryResult {
     const queryAst = typeof query === 'string' ? gql(query) : query;
     const variables = getVariablesWithPagination(options);
     const reducedResult = useReducedQuery(queryAst, variables, options);
@@ -34,4 +37,4 @@ export default (query: DocumentNode | string, options: AugmentedQueryHookOptions
         // This is a workaround for https://github.com/apollographql/react-apollo/issues/2601
         loading: !options.skip && !cacheData,
     };
-};
+}
