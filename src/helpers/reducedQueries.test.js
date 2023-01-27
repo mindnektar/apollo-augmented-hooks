@@ -797,6 +797,154 @@ it('removes fields if the same inline variables are used', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('removes fields if the same variables within list are used', () => {
+    const queryInCache = `
+        query {
+            things(filter: ["scalar-value", {val: "nested-value", listVal: ["nested-list-value"]}, ["nested-list-value"]]) {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            things(filter: ["scalar-value", {val: "nested-value", listVal: ["nested-list-value"]}, ["nested-list-value"]]) {
+                id
+                name
+                description
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            things(
+              filter: ["scalar-value", {val: "nested-value", listVal: ["nested-list-value"]}, ["nested-list-value"]]
+            ) {
+                id
+                description
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                __typename: 'Thing',
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('removes fields if the same inline variables within list are used', () => {
+    const queryInCache = `
+        query($filter: Filter) {
+            things(filter: [Filter, {val: Filter, listVal: [Filter]}, [Filter]]) {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            things(filter: [Filter, {val: Filter, listVal: [Filter]}, [Filter]]) {
+                id
+                name
+                description
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            things(filter: [Filter, {val: Filter, listVal: [Filter]}, [Filter]]) {
+                id
+                description
+            }
+        }
+    `;
+
+    const variables = {
+        filter: {
+            someFilter: 'some-value',
+        },
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                __typename: 'Thing',
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+        variables,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
+it('keeps fields if different variables within list are used', () => {
+    const queryInCache = `
+        query($filter: Filter) {
+            things(filter: [$filter, [$filter]]) {
+                id
+                name
+            }
+        }
+    `;
+    const requestedQuery = `
+        query($filter: Filter) {
+            things(filter: [$filter, [$filter]]) {
+                id
+                name
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__($filter: Filter) {
+            things(filter: [$filter, [$filter]]) {
+                id
+                name
+            }
+        }
+    `;
+    const variablesInCache = {
+        filter: {
+            someFilter: 'some-value',
+        },
+    };
+    const requestedVariables = {
+        filter: {
+            someFilter: 'some-other-value',
+        },
+    };
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            things: [{
+                __typename: 'Thing',
+                id: 'some-id',
+                name: 'some-name',
+            }],
+        },
+        variables: variablesInCache,
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery), requestedVariables);
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('removes the variable definition if it is no longer used', () => {
     const queryInCache = `
         query test($filter: Filter) {

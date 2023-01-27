@@ -11,21 +11,42 @@ export const extractVariablesFromFieldName = (fieldName) => {
     return variableString ? JSON.parse(variableString) : null;
 };
 
-const reduceArgs = (args, variables) => (
-    args.reduce((result, { name, value }) => {
-        if (value.kind === 'ObjectValue') {
-            return { ...result, [name.value]: reduceArgs(value.fields, variables) };
+const parseVariableValue = (value, variables) => {
+    // Handle both inline and external variables
+    if (typeof value !== 'object') return value; // this may happen with values within a list
+    const realValue = value.value || variables?.[value.name.value];
+    return value.kind === 'IntValue' ? parseInt(realValue, 10) : realValue;
+};
+
+const reduceArgs = (args, variables) => {
+    const isListValue = !args[0]?.name;
+    return args.reduce((result, { name, value, kind }) => {
+        if (kind === 'Variable' && !value) {
+            return isListValue
+                ? [...result, parseVariableValue(value, variables)]
+                : { ...result, [name.value]: parseVariableValue(value, variables) };
         }
 
-        const realValue = value.value || variables?.[value.name.value];
+        if (value.kind === 'ObjectValue') {
+            return isListValue
+                ? [...result, ...reduceArgs(value.fields, variables)]
+                : { ...result, [name.value]: reduceArgs(value.fields, variables) };
+        }
 
-        return {
-            ...result,
-            // Handle both inline and external variables
-            [name.value]: value.kind === 'IntValue' ? parseInt(realValue, 10) : realValue,
-        };
-    }, {})
-);
+        if (value.kind === 'ListValue') {
+            const values = value.values.map((val) => (val.kind === 'ObjectValue' || val.kind === 'ListValue'
+                ? reduceArgs(val.kind === 'ObjectValue' ? val.fields : val.values, variables)
+                : parseVariableValue(val, variables)));
+            return isListValue
+                ? [...result, ...values]
+                : { ...result, [name.value]: values };
+        }
+
+        return isListValue
+            ? [...result, parseVariableValue(value, variables)]
+            : { ...result, [name.value]: parseVariableValue(value, variables) };
+    }, isListValue ? [] : {});
+};
 
 export const buildFieldName = (selection, variables) => {
     if (!selection.arguments?.length) {
