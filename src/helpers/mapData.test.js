@@ -153,6 +153,104 @@ it('maps an array to an array', () => {
     expect(mapData(cacheData, dataMap)).toEqual(inflatedData);
 });
 
+it('maps a string to an object', () => {
+    const cacheData = {
+        users: [{
+            __typename: 'User',
+            id: 'some-user-id',
+            todoId: 'some-todo-id',
+        }],
+        todo: {
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            title: 'Do the dishes',
+            user: {
+                __typename: 'User',
+                id: 'some-user-id',
+            },
+        },
+    };
+    const inflatedData = {
+        users: [{
+            __typename: 'User',
+            id: 'some-user-id',
+            todoId: 'some-todo-id',
+            todo: {
+                __typename: 'Todo',
+                id: 'some-todo-id',
+                title: 'Do the dishes',
+                user: {
+                    __typename: 'User',
+                    id: 'some-user-id',
+                },
+            },
+        }],
+        todo: {
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            title: 'Do the dishes',
+            user: {
+                __typename: 'User',
+                id: 'some-user-id',
+            },
+        },
+    };
+    const dataMap = {
+        'users.todoId': { fieldName: 'todo', target: 'todo' },
+    };
+
+    expect(mapData(cacheData, dataMap)).toEqual(inflatedData);
+});
+
+it('maps a string to an array', () => {
+    const cacheData = {
+        users: [{
+            __typename: 'User',
+            id: 'some-user-id',
+            todoId: 'some-todo-id',
+        }],
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            title: 'Do the dishes',
+            user: {
+                __typename: 'User',
+                id: 'some-user-id',
+            },
+        }],
+    };
+    const inflatedData = {
+        users: [{
+            __typename: 'User',
+            id: 'some-user-id',
+            todoId: 'some-todo-id',
+            todo: {
+                __typename: 'Todo',
+                id: 'some-todo-id',
+                title: 'Do the dishes',
+                user: {
+                    __typename: 'User',
+                    id: 'some-user-id',
+                },
+            },
+        }],
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            title: 'Do the dishes',
+            user: {
+                __typename: 'User',
+                id: 'some-user-id',
+            },
+        }],
+    };
+    const dataMap = {
+        'users.todoId': { fieldName: 'todo', target: 'todos' },
+    };
+
+    expect(mapData(cacheData, dataMap)).toEqual(inflatedData);
+});
+
 it('does not map if no data map is provided', () => {
     const cacheData = {
         users: [{

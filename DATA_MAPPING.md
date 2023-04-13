@@ -88,3 +88,15 @@ useQuery(query, {
 ```
 
 Make sure to keep an eye on the order: The above `dataMap` will cause the `sections` to contain both the `users` and their `todos` because we specified `users.todos` first. If we had specified it last, there would be no mapping from `sections.users.todos` to `todos`.
+
+You can also reference cache objects using a simple ID string:
+
+```javascript
+useQuery(query, {
+    dataMap: {
+        'todos.userId': { fieldName: 'user', target: 'users' },
+    },
+});
+```
+
+In the above example, `userId` is a string referencing the `id` property in each object within the `users` array (as specified by the `target` attribute). The `fieldName` attribute determines how you can access the mapped object. The original `userId` property will still be present, but it will be accompanied by a `user` property (as specified by the `fieldName` attribute).
