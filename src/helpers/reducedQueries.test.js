@@ -1180,6 +1180,36 @@ it('keeps fields if the data has been evicted from the cache', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('removes scalar root fields if they are in the cache', () => {
+    const queryInCache = `
+        query {
+            thing
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing
+            otherThing
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            otherThing
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: 'some-value',
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('keeps non-id key fields', () => {
     const queryInCache = `
         query {

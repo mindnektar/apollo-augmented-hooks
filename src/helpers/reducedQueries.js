@@ -181,6 +181,11 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
                 return [...result, selection];
             }
 
+            if (typeof cacheObjectsOrRefs !== 'object') {
+                // If the field is not an object or array and it's already in the cache, there are no sub selections to handle.
+                return result;
+            }
+
             if (!Array.isArray(cacheObjectsOrRefs)) {
                 cacheObjectsOrRefs = [cacheObjectsOrRefs];
             }
