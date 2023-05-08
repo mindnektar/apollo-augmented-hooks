@@ -1,3 +1,21 @@
+const getPageOrCursor = (pagination, data) => {
+    if (pagination.type === 'page') {
+        return {
+            page: data.length === 0 ? 1 : Math.ceil(data.length / pagination.limit) + 1,
+        };
+    }
+
+    const sortedData = [...data].sort((a, b) => (
+        pagination.direction === 'desc'
+            ? b[pagination.orderBy].localeCompare(a[pagination.orderBy])
+            : a[pagination.orderBy].localeCompare(b[pagination.orderBy])
+    ));
+
+    return {
+        cursor: sortedData[sortedData.length - 1]?.[pagination.orderBy],
+    };
+};
+
 export const handleNextPage = (queryAst, cacheDataRef, reducedResult, pagination) => (
     async () => {
         const { selections } = queryAst.definitions[0].selectionSet;
@@ -10,17 +28,11 @@ export const handleNextPage = (queryAst, cacheDataRef, reducedResult, pagination
         }
 
         const data = cacheDataRef.current?.[paginatedField.name.value] || [];
-        const sortedData = [...data].sort((a, b) => (
-            pagination.direction === 'desc'
-                ? b[pagination.orderBy].localeCompare(a[pagination.orderBy])
-                : a[pagination.orderBy].localeCompare(b[pagination.orderBy])
-        ));
-
         const result = await reducedResult.fetchMore({
             variables: {
                 pagination: {
                     ...pagination,
-                    cursor: sortedData[sortedData.length - 1]?.[pagination.orderBy],
+                    ...getPageOrCursor(pagination, data),
                 },
             },
         });
