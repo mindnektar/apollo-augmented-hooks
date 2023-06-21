@@ -11,19 +11,44 @@ export const extractVariablesFromFieldName = (fieldName) => {
     return variableString ? JSON.parse(variableString) : null;
 };
 
-const reduceArgs = (args, variables) => (
-    args.reduce((result, { name, value }) => {
-        if (value.kind === 'ObjectValue') {
-            return { ...result, [name.value]: reduceArgs(value.fields, variables) };
+const parseVariableValue = (value, variables) => {
+    // Handle both inline and external variables
+    if (typeof value !== 'object') {
+        return value; // this may happen with values within a list
+    }
+
+    const realValue = value.value || variables?.[value.name.value];
+
+    return value.kind === 'IntValue' ? parseInt(realValue, 10) : realValue;
+};
+
+const mapArrayArgs = (args, variables) => (
+    args.map((item) => {
+        if (item.kind === 'ObjectValue') {
+            return reduceArgs(item.fields, variables);
         }
 
-        const realValue = value.value || variables?.[value.name.value];
+        if (item.kind === 'ListValue') {
+            return mapArrayArgs(item.values, variables);
+        }
 
-        return {
-            ...result,
-            // Handle both inline and external variables
-            [name.value]: value.kind === 'IntValue' ? parseInt(realValue, 10) : realValue,
-        };
+        return parseVariableValue(item, variables);
+    })
+);
+
+const reduceArgs = (args, variables) => (
+    args.reduce((result, { name, value }) => {
+        let next;
+
+        if (value.kind === 'ObjectValue') {
+            next = reduceArgs(value.fields, variables);
+        } else if (value.kind === 'ListValue') {
+            next = mapArrayArgs(value.values);
+        } else {
+            next = parseVariableValue(value, variables);
+        }
+
+        return { ...result, [name.value]: next };
     }, {})
 );
 

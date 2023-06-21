@@ -142,11 +142,23 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, v
 
 const hasArgumentVariable = (args, variable) => (
     args.some((argument) => {
-        if (argument.value?.fields) {
-            return hasArgumentVariable(argument.value.fields, variable);
+        if (argument.kind === 'Variable') {
+            return argument.name.value === variable;
         }
 
-        return argument.value?.name?.value === variable;
+        if (argument.kind === 'Argument' || argument.kind === 'ObjectField') {
+            return hasArgumentVariable([argument.value], variable);
+        }
+
+        if (argument.kind === 'ObjectValue') {
+            return hasArgumentVariable(argument.fields, variable);
+        }
+
+        if (argument.kind === 'ListValue') {
+            return hasArgumentVariable(argument.values, variable);
+        }
+
+        return argument.value === variable;
     })
 );
 
