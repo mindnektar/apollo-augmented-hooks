@@ -1159,6 +1159,53 @@ it('works with nested inline variables', () => {
     compare(reducedQueryAst, actualQuery);
 });
 
+it('works with inline fragments', () => {
+    const queryInCache = `
+        query {
+            thing {
+                id
+                ... on SubThing {
+                    someField
+                }
+            }
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing {
+                id
+                ... on SubThing {
+                    someField
+                }
+            }
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            thing {
+                id
+                ... on SubThing {
+                    someField
+                }
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: {
+                __typename: 'Thing',
+                id: 'some-id',
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('removes fields if they are in the cache but have no id', () => {
     const queryInCache = `
         query {

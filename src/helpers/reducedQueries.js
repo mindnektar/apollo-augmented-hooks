@@ -66,6 +66,10 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
     }
 
     const reducedSelections = selections.reduce((result, selection) => {
+        if (selection.kind !== 'Field') {
+            return [...result, selection];
+        }
+
         const fieldName = buildFieldName(selection, variables);
 
         if (
@@ -114,7 +118,12 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
 
     // If the reduced selection set is empty or only contains key fields, the cache already
     // contains all the data we need, so we can ignore this selection.
-    if (reducedSelections.every(({ name }) => isKeyField(cacheData, cacheObjectsOrRefs, name.value, keyFields))) {
+    const containsOnlyKeyFields = reducedSelections.every(({ name, kind }) => (
+        kind === 'Field'
+        && isKeyField(cacheData, cacheObjectsOrRefs, name.value, keyFields)
+    ));
+
+    if (containsOnlyKeyFields) {
         return [];
     }
 
@@ -185,6 +194,10 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
     // already have data in the cache.
     const selections = (
         queryAst.definitions[0].selectionSet.selections.reduce((result, selection) => {
+            if (selection.kind !== 'Field') {
+                return [...result, selection];
+            }
+
             const fieldName = buildFieldName(selection, variables);
             let cacheObjectsOrRefs = cacheContents.ROOT_QUERY?.[fieldName];
 
