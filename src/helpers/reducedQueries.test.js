@@ -1523,6 +1523,10 @@ it('ignores fragments', () => {
                 ...SomeFragment
             }
         }
+
+        fragment SomeFragment on Thing {
+            someKey
+        }
     `;
     const actualQuery = `
         query __REDUCED__ {
@@ -1530,6 +1534,10 @@ it('ignores fragments', () => {
                 id
                 ...SomeFragment
             }
+        }
+
+        fragment SomeFragment on Thing {
+            someKey
         }
     `;
 

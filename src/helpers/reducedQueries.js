@@ -190,56 +190,63 @@ const hasVariable = (selectionSet, variable) => (
 export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const cacheContents = cache.extract();
     const keyFields = getKeyFields(cache);
-    // Recursively iterate through the entire graphql query tree, removing the fields for which we
-    // already have data in the cache.
-    const selections = (
-        queryAst.definitions[0].selectionSet.selections.reduce((result, selection) => {
-            if (selection.kind !== 'Field') {
-                return [...result, selection];
-            }
 
-            const fieldName = buildFieldName(selection, variables);
-            let cacheObjectsOrRefs = cacheContents.ROOT_QUERY?.[fieldName];
-
-            if (cacheObjectsOrRefs === undefined) {
-                // If the field cannot be found in the cache, keep the entire selection.
-                return [...result, selection];
-            }
-
-            if (typeof cacheObjectsOrRefs !== 'object') {
-                // If the field is not an object or array and it's already in the cache, there are no sub selections to handle.
-                return result;
-            }
-
-            if (!Array.isArray(cacheObjectsOrRefs)) {
-                cacheObjectsOrRefs = [cacheObjectsOrRefs];
-            }
-
-            return handleSubSelections(result, selection, cacheContents, cacheObjectsOrRefs, variables, keyFields);
-        }, [])
-    );
-    // Construct a new tree from the reduced selection set.
-    const definition = queryAst.definitions[0];
-    const selectionSet = {
-        ...definition.selectionSet,
-        selections,
-    };
     const reducedQueryAst = {
         ...queryAst,
-        definitions: [{
-            ...definition,
-            name: {
-                kind: 'Name',
-                // Prefix the query name with something that clearly marks it as manipulated.
-                value: `__REDUCED__${definition.name?.value || ''}`,
-            },
-            selectionSet,
-            // Remove variable definitions that are no longer referenced anywhere in the selection
-            // set.
-            variableDefinitions: definition.variableDefinitions.filter(({ variable }) => (
-                hasVariable(selectionSet, variable.name.value)
-            )),
-        }],
+        definitions: queryAst.definitions.map((definition) => {
+            if (definition.kind !== 'OperationDefinition') {
+                return definition;
+            }
+
+            // Recursively iterate through the entire graphql query tree, removing the fields for which we
+            // already have data in the cache.
+            const selections = (
+                queryAst.definitions[0].selectionSet.selections.reduce((result, selection) => {
+                    if (selection.kind !== 'Field') {
+                        return [...result, selection];
+                    }
+
+                    const fieldName = buildFieldName(selection, variables);
+                    let cacheObjectsOrRefs = cacheContents.ROOT_QUERY?.[fieldName];
+
+                    if (cacheObjectsOrRefs === undefined) {
+                        // If the field cannot be found in the cache, keep the entire selection.
+                        return [...result, selection];
+                    }
+
+                    if (typeof cacheObjectsOrRefs !== 'object') {
+                        // If the field is not an object or array and it's already in the cache, there are no sub selections to handle.
+                        return result;
+                    }
+
+                    if (!Array.isArray(cacheObjectsOrRefs)) {
+                        cacheObjectsOrRefs = [cacheObjectsOrRefs];
+                    }
+
+                    return handleSubSelections(result, selection, cacheContents, cacheObjectsOrRefs, variables, keyFields);
+                }, [])
+            );
+            // Construct a new tree from the reduced selection set.
+            const selectionSet = {
+                ...definition.selectionSet,
+                selections,
+            };
+
+            return {
+                ...definition,
+                name: {
+                    kind: 'Name',
+                    // Prefix the query name with something that clearly marks it as manipulated.
+                    value: `__REDUCED__${definition.name?.value || ''}`,
+                },
+                selectionSet,
+                // Remove variable definitions that are no longer referenced anywhere in the selection
+                // set.
+                variableDefinitions: definition.variableDefinitions.filter(({ variable }) => (
+                    hasVariable(selectionSet, variable.name.value)
+                )),
+            };
+        }),
     };
 
     // If the reduced query happens to have no more selections because everything is already
