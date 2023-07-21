@@ -610,6 +610,41 @@ it('keeps fields if there are other items in the cache with the same typename th
     compare(reducedQueryAst, actualQuery);
 });
 
+it('removes primitive root query fields if they exist in the cache', () => {
+    const queryInCache = `
+        query {
+            thing
+            otherThing
+        }
+    `;
+    const requestedQuery = `
+        query {
+            thing
+            otherThing
+            yetAnotherThing
+        }
+    `;
+    const actualQuery = `
+        query __REDUCED__ {
+            yetAnotherThing
+        }
+    `;
+
+    cache.writeQuery({
+        query: gql(queryInCache),
+        data: {
+            thing: 'someValue',
+            otherThing: {
+                someKey: 'someValue',
+            },
+        },
+    });
+
+    const reducedQueryAst = makeReducedQueryAst(cache, gql(requestedQuery));
+
+    compare(reducedQueryAst, actualQuery);
+});
+
 it('removes fields if it exists in the cache but the value is null', () => {
     const queryInCache = `
         query {

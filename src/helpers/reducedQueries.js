@@ -201,7 +201,7 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
             // Recursively iterate through the entire graphql query tree, removing the fields for which we
             // already have data in the cache.
             const selections = (
-                queryAst.definitions[0].selectionSet.selections.reduce((result, selection) => {
+                definition.selectionSet.selections.reduce((result, selection) => {
                     if (selection.kind !== 'Field') {
                         return [...result, selection];
                     }
@@ -214,7 +214,7 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
                         return [...result, selection];
                     }
 
-                    if (typeof cacheObjectsOrRefs !== 'object') {
+                    if (!selection.selectionSet) {
                         // If the field is not an object or array and it's already in the cache, there are no sub selections to handle.
                         return result;
                     }
