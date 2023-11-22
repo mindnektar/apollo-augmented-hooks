@@ -55,6 +55,6 @@ export default (data, map = {}) => {
         const fromPath = from.split('.');
         const { target, fieldName } = typeof to === 'object' ? to : { target: to, fieldName: fromPath.at(-1) };
 
-        return mapObjectData(result, fromPath, target, fieldName, getRefs(data[target]));
+        return mapObjectData(result, fromPath, target, fieldName, getRefs(result[target]));
     }, data);
 };
