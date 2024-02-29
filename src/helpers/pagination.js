@@ -16,8 +16,12 @@ const getPageOrCursor = (pagination, data) => {
     };
 };
 
-export const handleNextPage = (queryAst, cacheDataRef, reducedResult, pagination) => (
+export const handleNextPage = (queryAst, cacheDataRef, reducedResult, options) => (
     async () => {
+        if (!options.variables?.pagination) {
+            return null;
+        }
+
         const { selections } = queryAst.definitions[0].selectionSet;
         const paginatedField = selections.find((selection) => (
             selection.arguments.some(({ name }) => name.value === 'pagination')
@@ -31,8 +35,8 @@ export const handleNextPage = (queryAst, cacheDataRef, reducedResult, pagination
         const result = await reducedResult.fetchMore({
             variables: {
                 pagination: {
-                    ...pagination,
-                    ...getPageOrCursor(pagination, data),
+                    ...options.variables.pagination,
+                    ...getPageOrCursor(options.variables.pagination, data),
                 },
             },
         });

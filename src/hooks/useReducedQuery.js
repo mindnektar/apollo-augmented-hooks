@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@apollo/client';
+import { useApolloClient, useQuery } from '@apollo/client';
 import { makeReducedQueryAst } from '../helpers/reducedQueries';
 import { registerRequest, deregisterRequest } from '../helpers/inFlightTracking';
-import apolloClient from '../apolloClient';
 import { useGlobalContext } from '../globalContextHook';
 
 // Create a reduced version of the query that contains only the fields that are not in the cache already.
@@ -23,8 +22,8 @@ const getQueryAst = (queryAst, client, options) => {
     return makeReducedQueryAst(client.cache, queryAst, options.variables);
 };
 
-export default (queryAst, variables, options) => {
-    const client = apolloClient();
+export default (queryAst, options) => {
+    const client = useApolloClient();
     const globalContext = useGlobalContext();
     const queryName = queryAst.definitions[0].name?.value || '';
 
@@ -45,8 +44,7 @@ export default (queryAst, variables, options) => {
             ...globalContext,
             ...options.context,
         },
-        variables,
-        client,
+        variables: options.variables,
         // This toggles `loading` every time a polling request starts and completes. We need this
         // for the effect hook to work.
         notifyOnNetworkStatusChange: !!options.pollInterval,
@@ -56,7 +54,11 @@ export default (queryAst, variables, options) => {
             // The reduced query is kept in state to avoid making another request if a request is
             // already in flight and the cache contents change in the meantime. Once the request is
             // completed, we can recompute the reduced query.
-            resetReducedQueries();
+            // XXX: Don't do this if pagination is enabled because this causes an as yet unexplained
+            // infinite rendering loop.
+            if (!options.variables?.pagination) {
+                resetReducedQueries();
+            }
         },
     });
 

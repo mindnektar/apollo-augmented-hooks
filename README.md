@@ -50,10 +50,6 @@ Default: `true`. Set to `false` if you wish to disable the query reduction funct
 
 An object telling `useQuery` which parts of the response data should be mapped to other parts. See [this guide on data mapping](DATA_MAPPING.md) for more information.
 
-#### - pagination
-
-*Experimental and WIP.*
-
 ### useMutation
 
 `useMutation` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usemutation) counterpart. Additionally, the mutation function supports the following new options:
