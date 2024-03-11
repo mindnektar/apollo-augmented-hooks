@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApolloClient, useQuery } from '@apollo/client';
+import { useApolloClient, useSuspenseQuery, useQuery, skipToken } from '@apollo/client';
 import { makeReducedQueryAst } from '../helpers/reducedQueries';
 import { registerRequest, deregisterRequest } from '../helpers/inFlightTracking';
 import { useGlobalContext } from '../globalContextHook';
@@ -22,7 +22,7 @@ const getQueryAst = (queryAst, client, options) => {
     return makeReducedQueryAst(client.cache, queryAst, options.variables);
 };
 
-export default (queryAst, options) => {
+export default (useQueryHook, queryAst, options) => {
     const client = useApolloClient();
     const globalContext = useGlobalContext();
     const queryName = queryAst.definitions[0].name?.value || '';
@@ -36,31 +36,22 @@ export default (queryAst, options) => {
         setReducedQueryAst(getQueryAst(queryAst, client, options));
     };
 
-    const reducedResult = useQuery(reducedQueryAst || queryAst, {
-        // If all the requested data is already in the cache, we can skip this query.
-        skip: !reducedQueryAst,
+    const skip = !reducedQueryAst || options === skipToken || options.skip;
+
+    // If all the requested data is already in the cache, we can skip this query.
+    const queryOptions = skip && useQueryHook === useSuspenseQuery ? skipToken : {
         ...options,
         context: {
             ...globalContext,
             ...options.context,
         },
-        variables: options.variables,
+        skip: skip && useQueryHook === useQuery,
         // This toggles `loading` every time a polling request starts and completes. We need this
         // for the effect hook to work.
         notifyOnNetworkStatusChange: !!options.pollInterval,
-        // If all the requested data is already in the cache, we can skip this query.
-        fetchPolicy: reducedQueryAst ? options.fetchPolicy : 'cache-only',
-        onCompleted: () => {
-            // The reduced query is kept in state to avoid making another request if a request is
-            // already in flight and the cache contents change in the meantime. Once the request is
-            // completed, we can recompute the reduced query.
-            // XXX: Don't do this if pagination is enabled because this causes an as yet unexplained
-            // infinite rendering loop.
-            if (!options.variables?.pagination) {
-                resetReducedQueries();
-            }
-        },
-    });
+    };
+
+    const reducedResult = useQueryHook(reducedQueryAst || queryAst, queryOptions);
 
     // Remember all the query requests that are currently in flight, so we can ensure that any mutations
     // happening while such a request is in flight updates the cache *after* the request completes and

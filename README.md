@@ -2,7 +2,7 @@
 
 # apollo-augmented-hooks
 
-Drop-in replacements for [@apollo/client](https://github.com/apollographql/apollo-client)'s `useQuery`, `useLazyQuery`, `useMutation` and `useSubscription` hooks with reduced overhead and additional functionality.
+Drop-in replacements for [@apollo/client](https://github.com/apollographql/apollo-client)'s `useQuery`, `useLazyQuery`, `useSuspenseQuery`, `useMutation` and `useSubscription` hooks with reduced overhead and additional functionality.
 
 ## What problems does this package solve?
 
@@ -25,22 +25,11 @@ or
 npm install --save apollo-augmented-hooks
 ```
 
-In order to use the hooks, you need to make them aware of your apollo client instance during setup:
-
-```js
-import { ApolloClient } from '@apollo/client';
-import { initAugmentedHooks } from 'apollo-augmented-hooks';
-
-const client = new ApolloClient();
-
-initAugmentedHooks(client);
-```
-
 ## API
 
-### useQuery
+### useQuery and useSuspenseQuery
 
-`useQuery` has the same signature as its [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterpart. Additionally, it supports the following new options:
+`useQuery` and `useSuspendQuery` have the same signature as their [@apollo/client](https://www.apollographql.com/docs/react/api/react/hooks/#usequery) counterparts. Additionally, they support the following new options:
 
 #### - reducedQuery
 

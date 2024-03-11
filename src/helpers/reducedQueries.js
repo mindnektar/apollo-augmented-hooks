@@ -1,5 +1,5 @@
 import { getKeyFields } from './keyFields';
-import { buildFieldName } from './fieldNames';
+import { buildFieldNames } from './fieldNames';
 
 // cacheObjectOrRef may contain either the actual cache object or a reference to it. In the latter
 // case, this function returns the actual cache object that is being referenced.
@@ -13,7 +13,7 @@ const getCacheObject = (cacheData, cacheObjectOrRef) => {
     return cacheObjectOrRef;
 };
 
-const isPresentInCache = (cacheData, cacheObjectOrRef, fieldName) => {
+const isPresentInCache = (cacheData, cacheObjectOrRef, fieldNames) => {
     const cacheObject = getCacheObject(cacheData, cacheObjectOrRef);
 
     // Null means that the cache object exists but contains no data.
@@ -27,10 +27,10 @@ const isPresentInCache = (cacheData, cacheObjectOrRef, fieldName) => {
         return false;
     }
 
-    return cacheObject[fieldName] !== undefined;
+    return fieldNames.some((fieldName) => cacheObject[fieldName] !== undefined);
 };
 
-const findNextCacheObjectsOrRefs = (cacheData, cacheObjectsOrRefs, fieldName) => (
+const findNextCacheObjectsOrRefs = (cacheData, cacheObjectsOrRefs, fieldNames) => (
     cacheObjectsOrRefs.reduce((result, item) => {
         const itemCacheObject = getCacheObject(cacheData, item);
 
@@ -38,6 +38,7 @@ const findNextCacheObjectsOrRefs = (cacheData, cacheObjectsOrRefs, fieldName) =>
             return result;
         }
 
+        const fieldName = fieldNames.find((value) => itemCacheObject[value] !== undefined);
         const fieldData = itemCacheObject[fieldName];
 
         if (Array.isArray(fieldData)) {
@@ -70,15 +71,15 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
             return [...result, selection];
         }
 
-        const fieldName = buildFieldName(selection, variables);
+        const fieldNames = buildFieldNames(selection, variables);
 
         if (
             // Always keep any key fields, otherwise apollo can't merge the cache items after the
             // request is done.
-            isKeyField(cacheData, cacheObjectsOrRefs, fieldName, keyFields)
+            isKeyField(cacheData, cacheObjectsOrRefs, selection.name.value, keyFields)
             // Keep the entire selection if at least one of its items is not in the cache (it may
             // have been evicted at some point).
-            || !cacheObjectsOrRefs.every((item) => isPresentInCache(cacheData, item, fieldName))
+            || !cacheObjectsOrRefs.every((item) => isPresentInCache(cacheData, item, fieldNames))
         ) {
             return [...result, selection];
         }
@@ -95,7 +96,7 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
             // values. By not only using a single object as a reference but rather as many like
             // objects as possible, we increase our chances of finding a useful reference for any
             // deeper-level fields.
-            const nextCacheObjectsOrRefs = findNextCacheObjectsOrRefs(cacheData, cacheObjectsOrRefs, fieldName);
+            const nextCacheObjectsOrRefs = findNextCacheObjectsOrRefs(cacheData, cacheObjectsOrRefs, fieldNames);
 
             // If we can't find any data for this field in the cache at all, we'll drop the entire
             // selection. This may also be the case if we have already requested this field before,
@@ -206,7 +207,8 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
                         return [...result, selection];
                     }
 
-                    const fieldName = buildFieldName(selection, variables);
+                    const fieldNames = buildFieldNames(selection, variables);
+                    const fieldName = fieldNames.find((item) => cacheContents.ROOT_QUERY?.[item] !== undefined);
                     let cacheObjectsOrRefs = cacheContents.ROOT_QUERY?.[fieldName];
 
                     if (cacheObjectsOrRefs === undefined) {

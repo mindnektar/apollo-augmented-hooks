@@ -52,9 +52,9 @@ const reduceArgs = (args, variables) => (
     }, {})
 );
 
-export const buildFieldName = (selection, variables) => {
+export const buildFieldNames = (selection, variables) => {
     if (!selection.arguments?.length) {
-        return selection.name.value;
+        return [selection.name.value];
     }
 
     const args = reduceArgs(selection.arguments, variables);
@@ -63,8 +63,14 @@ export const buildFieldName = (selection, variables) => {
     //
     // someField
     // someField({"someParam":"someValue"})
+    // someField:{"someParam":"someValue"}
+    //
+    // There are two possible formats for field names containing variables. It is unclear
+    // when which one is used, so we have to account for both.
     //
     // If there are multiple arguments, they are sorted alphabetically, which is why we use
     // json-stable-stringify here (which guarantees alphabetical order).
-    return `${selection.name.value}(${stringify(args)})`;
+    const argsString = stringify(args);
+
+    return [`${selection.name.value}(${argsString})`, `${selection.name.value}:${argsString}`];
 };

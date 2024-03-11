@@ -2,17 +2,12 @@ import { gql, useMutation } from '@apollo/client';
 import { handleOptimisticResponse } from './helpers/optimisticResponse';
 import { handleModifiers } from './helpers/modifiers';
 import { waitForRequestsInFlight, areRequestsInFlight } from './helpers/inFlightTracking';
-import apolloClient from './apolloClient';
 import { useGlobalContext } from './globalContextHook';
 
 export default (mutation, hookOptions = {}) => {
-    const client = apolloClient();
     const mutationAst = typeof mutation === 'string' ? gql(mutation) : mutation;
     const mutationName = mutationAst.definitions[0].selectionSet.selections[0].name.value;
-    const [mutate, ...mutationResult] = useMutation(mutationAst, {
-        ...hookOptions,
-        client,
-    });
+    const [mutate, ...mutationResult] = useMutation(mutationAst, hookOptions);
     const args = mutationAst.definitions[0].selectionSet.selections[0].arguments;
     const globalContext = useGlobalContext();
 

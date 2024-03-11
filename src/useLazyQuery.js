@@ -1,10 +1,9 @@
-import { gql, useLazyQuery } from '@apollo/client';
-import apolloClient from './apolloClient';
+import { gql, useLazyQuery, useApolloClient } from '@apollo/client';
 import { useGlobalContext } from './globalContextHook';
 import { handleModifiers } from './helpers/modifiers';
 
 export default (query, options = {}) => {
-    const client = apolloClient();
+    const client = useApolloClient();
     const globalContext = useGlobalContext();
     const queryAst = typeof query === 'string' ? gql(query) : query;
 
