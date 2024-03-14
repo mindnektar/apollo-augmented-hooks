@@ -18,8 +18,6 @@ export default (query, options = {}) => {
     return {
         ...reducedResult,
         nextPage: handleNextPage(queryAst, cacheDataRef, reducedResult, options),
-        // When changing variables, `useSuspenseQuery`'s data can revert to undefined.
-        // Return the cached result instead.
-        data: cacheData || cacheDataRef.current,
+        data: cacheData,
     };
 };

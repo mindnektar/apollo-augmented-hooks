@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useApolloClient, useSuspenseQuery, useQuery, skipToken } from '@apollo/client';
 import { makeReducedQueryAst } from '../helpers/reducedQueries';
 import { registerRequest, deregisterRequest } from '../helpers/inFlightTracking';
 import { useGlobalContext } from '../globalContextHook';
+import useForceUpdate from './useForceUpdate';
 
 // Create a reduced version of the query that contains only the fields that are not in the cache already.
 const getQueryAst = (queryAst, client, options) => {
@@ -26,15 +27,11 @@ export default (useQueryHook, queryAst, options) => {
     const client = useApolloClient();
     const globalContext = useGlobalContext();
     const queryName = queryAst.definitions[0].name?.value || '';
+    const [forceUpdate, updateKey] = useForceUpdate();
 
-    // Functional default state to avoid recomputing the reduced query on each render.
-    const [reducedQueryAst, setReducedQueryAst] = useState(() => (
+    const reducedQueryAst = useMemo(() => (
         getQueryAst(queryAst, client, options)
-    ));
-
-    const resetReducedQueries = () => {
-        setReducedQueryAst(getQueryAst(queryAst, client, options));
-    };
+    ), [JSON.stringify(options.variables || {}), updateKey]);
 
     const skip = !reducedQueryAst || options === skipToken || options.skip;
 
@@ -73,18 +70,12 @@ export default (useQueryHook, queryAst, options) => {
     // Listen for mutation modifiers requesting a reduced query reset. This happens if one or more
     // modifiers returned the DELETE sentinel object.
     useEffect(() => {
-        window.addEventListener('reset-reduced-queries', resetReducedQueries);
+        window.addEventListener('reset-reduced-queries', forceUpdate);
 
         return () => {
-            window.removeEventListener('reset-reduced-queries', resetReducedQueries);
+            window.removeEventListener('reset-reduced-queries', forceUpdate);
         };
     }, []);
-
-    // Whenever the query variables change, we need to generate a new reduced query because we are in
-    // fact dealing with a new query.
-    useEffect(() => {
-        resetReducedQueries();
-    }, [JSON.stringify(options.variables || {})]);
 
     return reducedResult;
 };
