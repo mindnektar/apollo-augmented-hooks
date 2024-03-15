@@ -2,8 +2,6 @@ import stringify from 'json-stable-stringify';
 import { keyFieldsForTypeName } from './keyFields';
 import { extractVariablesFromFieldName } from './fieldNames';
 
-let shouldResetReducedQueries = false;
-
 const areCacheObjectsEqual = (refA, refB, keyFields, readField) => (
     keyFields.every((keyField, index) => {
         if (Array.isArray(keyField)) {
@@ -77,7 +75,8 @@ const augmentFields = (cache, cacheObject, item, fields) => {
     const modify = (callback, previous, details) => {
         // Attach a couple additional helpers to apollo's standard details object.
         const itemRef = details.toReference(item);
-        const callbackResult = callback({
+
+        return callback({
             ...details,
             previous,
             item,
@@ -87,15 +86,6 @@ const augmentFields = (cache, cacheObject, item, fields) => {
             setIf: handleSetIf(cache, item, itemRef, previous, details),
             cacheObject,
         });
-
-        // Since the reduced queries are cached, they need to be notified when the DELETE sentinel
-        // object is returned, so that a refetch happens if they include the deleted field. We set
-        // the flag here and trigger the respective event after all modifiers have been handled.
-        if (callbackResult === details.DELETE) {
-            shouldResetReducedQueries = true;
-        }
-
-        return callbackResult;
     };
 
     if (typeof fields === 'function') {
@@ -238,11 +228,4 @@ export const handleModifiers = (cache, item, modifiers) => {
 
         handleModifier(cache, cacheData, item, modifier);
     });
-
-    // If at least one modifier contained a field returning the DELETE sentinel object, cause all
-    // active reduced queries to recompute, so that a refetch happens if they include the deleted field.
-    if (shouldResetReducedQueries) {
-        window.dispatchEvent(new Event('reset-reduced-queries'));
-        shouldResetReducedQueries = false;
-    }
 };

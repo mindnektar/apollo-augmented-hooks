@@ -1,5 +1,9 @@
+import stringify from 'json-stable-stringify';
+import { Trie } from '@wry/trie';
 import { getKeyFields } from './keyFields';
 import { buildFieldNames } from './fieldNames';
+
+const reducedQueryCache = new Trie();
 
 // cacheObjectOrRef may contain either the actual cache object or a reference to it. In the latter
 // case, this function returns the actual cache object that is being referenced.
@@ -189,10 +193,17 @@ const hasVariable = (selectionSet, variable) => (
 );
 
 export const makeReducedQueryAst = (cache, queryAst, variables) => {
+    const cacheKey = [queryAst, stringify(variables)];
+    const ref = reducedQueryCache.lookupArray(cacheKey);
+
+    if (ref.current) {
+        return ref.current;
+    }
+
     const cacheContents = cache.extract();
     const keyFields = getKeyFields(cache);
 
-    const reducedQueryAst = {
+    let reducedQueryAst = {
         ...queryAst,
         definitions: queryAst.definitions.map((definition) => {
             if (definition.kind !== 'OperationDefinition') {
@@ -254,8 +265,10 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
     // If the reduced query happens to have no more selections because everything is already
     // available in the cache, return null so we can skip this query.
     if (reducedQueryAst.definitions[0].selectionSet.selections.length === 0) {
-        return null;
+        reducedQueryAst = null;
     }
+
+    ref.current = reducedQueryAst;
 
     return reducedQueryAst;
 };
