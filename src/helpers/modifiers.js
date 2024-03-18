@@ -1,4 +1,5 @@
 import stringify from 'json-stable-stringify';
+import { clearReducedQueryCache } from './reducedQueries';
 import { keyFieldsForTypeName } from './keyFields';
 import { extractVariablesFromFieldName } from './fieldNames';
 
@@ -210,6 +211,8 @@ export const handleModifiers = (cache, item, modifiers) => {
     if (!modifiers) {
         return;
     }
+
+    clearReducedQueryCache();
 
     const cacheData = cache.extract();
 

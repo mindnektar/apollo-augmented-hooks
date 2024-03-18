@@ -3,7 +3,7 @@ import { Trie } from '@wry/trie';
 import { getKeyFields } from './keyFields';
 import { buildFieldNames } from './fieldNames';
 
-const reducedQueryCache = new Trie();
+let reducedQueryCache = new Trie();
 
 // cacheObjectOrRef may contain either the actual cache object or a reference to it. In the latter
 // case, this function returns the actual cache object that is being referenced.
@@ -191,6 +191,10 @@ const hasVariable = (selectionSet, variable) => (
         return isVariableInArguments || isVariableInDirectives || isVariableInSelectionSet;
     })
 );
+
+export const clearReducedQueryCache = () => {
+    reducedQueryCache = new Trie();
+};
 
 export const makeReducedQueryAst = (cache, queryAst, variables) => {
     const cacheKey = [queryAst, stringify(variables)];

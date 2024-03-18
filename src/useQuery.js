@@ -6,8 +6,8 @@ import useCacheQuery from './hooks/useCacheQuery';
 
 export default (query, options = {}) => {
     const queryAst = typeof query === 'string' ? gql(query) : query;
-    const reducedResult = useReducedQuery(useQuery, queryAst, options);
     const cacheData = useCacheQuery(queryAst, options);
+    const reducedResult = useReducedQuery(useQuery, queryAst, cacheData, options);
     const cacheDataRef = useRef(cacheData);
 
     useEffect(() => {

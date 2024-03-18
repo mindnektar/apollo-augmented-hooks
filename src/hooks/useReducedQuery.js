@@ -22,12 +22,12 @@ const getQueryAst = (queryAst, client, options) => {
     return makeReducedQueryAst(client.cache, queryAst, options.variables);
 };
 
-export default (useQueryHook, queryAst, options) => {
+export default (useQueryHook, queryAst, cacheData, options) => {
     const client = useApolloClient();
     const globalContext = useGlobalContext();
     const queryName = queryAst.definitions[0].name?.value || '';
-    const reducedQueryAst = getQueryAst(queryAst, client, options);
-    const skip = !reducedQueryAst || options === skipToken || options.skip;
+    const skip = options === skipToken || options.skip;
+    const reducedQueryAst = !skip && !cacheData ? getQueryAst(queryAst, client, options) : null;
 
     // If all the requested data is already in the cache, we can skip this query.
     const queryOptions = skip && useQueryHook === useSuspenseQuery ? skipToken : {
