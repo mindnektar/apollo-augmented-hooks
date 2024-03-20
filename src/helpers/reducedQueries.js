@@ -90,7 +90,7 @@ const filterSubSelections = (selections, cacheData, cacheObjectsOrRefs, variable
 
         // Drop the selection if it is marked with the @client directive, since that means it's
         // local-only.
-        if (selection.directives.some((directive) => directive.name.value === 'client')) {
+        if ((selection.directives || []).some((directive) => directive.name.value === 'client')) {
             return result;
         }
 
@@ -155,7 +155,7 @@ const handleSubSelections = (result, selection, cacheData, cacheObjectsOrRefs, v
 };
 
 const hasArgumentVariable = (args, variable) => (
-    args.some((argument) => {
+    (args || []).some((argument) => {
         if (argument.kind === 'Variable') {
             return argument.name.value === variable;
         }
@@ -183,7 +183,7 @@ const hasVariable = (selectionSet, variable) => (
         }
 
         const isVariableInArguments = hasArgumentVariable(selection.arguments, variable);
-        const isVariableInDirectives = selection.directives.some((directive) => (
+        const isVariableInDirectives = (selection.directives || []).some((directive) => (
             directive.arguments.some(({ value }) => value?.name?.value === variable)
         ));
         const isVariableInSelectionSet = hasVariable(selection.selectionSet, variable);
@@ -259,7 +259,7 @@ export const makeReducedQueryAst = (cache, queryAst, variables) => {
                 selectionSet,
                 // Remove variable definitions that are no longer referenced anywhere in the selection
                 // set.
-                variableDefinitions: definition.variableDefinitions.filter(({ variable }) => (
+                variableDefinitions: (definition.variableDefinitions || []).filter(({ variable }) => (
                     hasVariable(selectionSet, variable.name.value)
                 )),
             };
