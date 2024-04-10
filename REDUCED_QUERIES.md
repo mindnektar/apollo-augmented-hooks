@@ -80,3 +80,34 @@ Depending on how many shared selection sets there are in your application's quer
 If you use fragments in your queries, they will be kept as they are, no matter if the fields within the fragment are already present in the cache.
 
 If you ever need to disable this functionality, you can pass the option `reducedQuery: false` to `useQuery`.
+
+# Why are my queries not refetched when calling `clearStore` or `refetchStore`?
+
+Generating reduced queries may take a fair bit of computing power, so to keep that from happening each render, the reduced queries are cached. The cache is emptied after every cache modification, so you won't need to do anything when using `useMutation` or `useSubscription` hooks, but if you use `clearStore` or `refetchStore`, you will need to clear the reduced query cache yourself. You may do so either explicitly...
+
+```javascript
+import { useApolloClient } from '@apollo/client';
+import { clearReducedQueryCache } from 'apollo-augmented-hooks';
+
+const MyComponent = () => {
+    const apolloClient = useApolloClient();
+
+    const doSomethingWithTheCache = () => {
+        apolloClient.clearStore();
+        clearReducedQueryCache();
+    };
+};
+```
+
+... or implicitly in the event callback:
+
+```javascript
+import { ApolloClient } from '@apollo/client';
+import { clearReducedQueryCache } from 'apollo-augmented-hooks';
+
+const apolloClient = new ApolloClient();
+
+apolloClient.onClearStore(() => {
+    clearReducedQueryCache();
+});
+```
