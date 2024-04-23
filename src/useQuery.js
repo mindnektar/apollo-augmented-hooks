@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { useQuery, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
 import { handleNextPage } from './helpers/pagination';
 import useReducedQuery from './hooks/useReducedQuery';
 import useCacheQuery from './hooks/useCacheQuery';
@@ -7,7 +7,7 @@ import useCacheQuery from './hooks/useCacheQuery';
 export default (query, options = {}) => {
     const queryAst = typeof query === 'string' ? gql(query) : query;
     const cacheData = useCacheQuery(queryAst, options);
-    const reducedResult = useReducedQuery(useQuery, queryAst, cacheData, options);
+    const reducedResult = useReducedQuery('useQuery', queryAst, cacheData, options);
     const cacheDataRef = useRef(cacheData);
 
     useEffect(() => {

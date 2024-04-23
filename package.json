@@ -1,6 +1,6 @@
 {
   "name": "apollo-augmented-hooks",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Drop-in replacements for @apollo/client's useQuery, useMutation and useSubscription hooks with reduced overhead and additional functionality.",
   "main": "lib/index.js",
   "scripts": {
@@ -23,14 +23,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/appmotion/apollo-augmented-hooks"
+    "url": "git+https://github.com/mindnektar/apollo-augmented-hooks"
   },
   "author": "Martin Denk",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/appmotion/apollo-augmented-hooks/issues"
+    "url": "https://github.com/mindnektar/apollo-augmented-hooks/issues"
   },
-  "homepage": "https://github.com/appmotion/apollo-augmented-hooks/#readme",
+  "homepage": "https://github.com/mindnektar/apollo-augmented-hooks/#readme",
   "dependencies": {
     "@wry/trie": "^0.5.0",
     "deepmerge": "^4.2.2",

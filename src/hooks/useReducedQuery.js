@@ -4,6 +4,8 @@ import { makeReducedQueryAst } from '../helpers/reducedQueries';
 import { registerRequest, deregisterRequest } from '../helpers/inFlightTracking';
 import { useGlobalContext } from '../globalContextHook';
 
+const hookTypeMap = { useQuery, useSuspenseQuery };
+
 // Create a reduced version of the query that contains only the fields that are not in the cache already.
 const getQueryAst = (queryAst, client, options) => {
     if (
@@ -22,7 +24,7 @@ const getQueryAst = (queryAst, client, options) => {
     return makeReducedQueryAst(client.cache, queryAst, options.variables);
 };
 
-export default (useQueryHook, queryAst, cacheData, options) => {
+export default (hookType, queryAst, cacheData, options) => {
     const client = useApolloClient();
     const globalContext = useGlobalContext();
     const queryName = queryAst.definitions[0].name?.value || '';
@@ -30,19 +32,19 @@ export default (useQueryHook, queryAst, cacheData, options) => {
     const reducedQueryAst = !skip && !cacheData ? getQueryAst(queryAst, client, options) : null;
 
     // If all the requested data is already in the cache, we can skip this query.
-    const queryOptions = skip && useQueryHook === useSuspenseQuery ? skipToken : {
+    const queryOptions = skip && hookType === 'useSuspenseQuery' ? skipToken : {
         ...options,
         context: {
             ...globalContext,
             ...options.context,
         },
-        skip: skip && useQueryHook === useQuery,
+        skip: skip && hookType === 'useQuery',
         // This toggles `loading` every time a polling request starts and completes. We need this
         // for the effect hook to work.
         notifyOnNetworkStatusChange: !!options.pollInterval,
     };
 
-    const reducedResult = useQueryHook(reducedQueryAst || queryAst, queryOptions);
+    const reducedResult = hookTypeMap[hookType](reducedQueryAst || queryAst, queryOptions);
 
     // Remember all the query requests that are currently in flight, so we can ensure that any mutations
     // happening while such a request is in flight updates the cache *after* the request completes and
