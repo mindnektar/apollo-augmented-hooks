@@ -15,6 +15,12 @@ export default (query, options = {}) => {
         cacheDataRef.current = cacheData;
     });
 
+    // Trigger suspense if there is no or incomplete data in the cache because we need to wait for the reduced query to fetch it and
+    // populate the cache. It's possible for apollo client to release the suspense while the cache item is still unavailable.
+    if (!cacheData) {
+        throw new Promise(() => {});
+    }
+
     return {
         ...reducedResult,
         nextPage: handleNextPage(queryAst, cacheDataRef, reducedResult, options),
