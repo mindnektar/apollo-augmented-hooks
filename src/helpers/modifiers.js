@@ -35,7 +35,7 @@ const handleIncludeIf = (cache, item, previous, details) => (
 
         const keyFields = keyFieldsForTypeName(cache, subjects[0].__typename);
         const next = origin.filter((ref) => (
-            subjects.some((subject) => (
+            subjects.every((subject) => (
                 !areCacheObjectsEqual(ref, subject, keyFields, details.readField)
             ))
         ));
