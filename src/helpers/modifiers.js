@@ -26,7 +26,7 @@ const areCacheObjectsEqual = (refA, refB, keyFields, readField) => (
 // returns true or false. Reduces overhead.
 const handleIncludeIf = (cache, item, previous, details) => (
     (condition, options = {}) => {
-        const subjects = options.subjects || [item];
+        const subjects = options.subjects || (Array.isArray(item) ? item : [item]);
         const origin = options.origin || previous;
 
         if (subjects.length === 0) {
