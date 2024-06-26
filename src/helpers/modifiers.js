@@ -116,6 +116,10 @@ const getCacheIds = (cache, cacheData, item, cacheObject, typename) => {
                 return [];
             }
 
+            if (Array.isArray(result)) {
+                return result.map((resultItem) => cache.identify(resultItem));
+            }
+
             return [cache.identify(result)];
         }
 
