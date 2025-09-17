@@ -1,22 +1,23 @@
-import { gql, useMutation } from '@apollo/client';
+import { gql, useMutation, useApolloClient } from '@apollo/client';
 import { handleOptimisticResponse } from './helpers/optimisticResponse';
 import { handleModifiers } from './helpers/modifiers';
 import { waitForRequestsInFlight, areRequestsInFlight } from './helpers/inFlightTracking';
 import { useGlobalContext } from './globalContextHook';
 
 export default (mutation, hookOptions = {}) => {
+    const client = useApolloClient();
     const mutationAst = typeof mutation === 'string' ? gql(mutation) : mutation;
     const mutationName = mutationAst.definitions[0].selectionSet.selections[0].name.value;
     const [mutate, ...mutationResult] = useMutation(mutationAst, hookOptions);
     const args = mutationAst.definitions[0].selectionSet.selections[0].arguments;
     const globalContext = useGlobalContext();
 
-    const augmentedMutate = ({ input, ...options } = {}) => {
+    const augmentedMutate = async ({ input, ...options } = {}) => {
         // Automatically prepend the argument name when there's only a single argument, which is
         // most of the time ($input or $id), reducing overhead.
         const variables = args.length === 1 ? { [args[0].name.value]: input } : input;
 
-        return mutate({
+        const result = await mutate({
             variables,
             ...options,
             context: {
@@ -47,6 +48,26 @@ export default (mutation, hookOptions = {}) => {
                 }
             },
         });
+
+        if (options.lazyRefetch) {
+            // Make sure that only queries that are currently active are refetched immediately.
+            await client.refetchQueries({
+                include: 'active',
+                onQueryUpdated: (query, { result }) => (
+                    query.observers.size > 0
+                    && query.options.fetchPolicy !== 'cache-only'
+                    && !query.queryName.startsWith('__REDUCED__')
+                    && options.lazyRefetch.some((fieldName) => result[fieldName])
+                ),
+            });
+
+            // Queries that are not currently active should be refetched only once they become active again.
+            options.lazyRefetch.forEach((fieldName) => {
+                client.cache.evict({ fieldName, broadcast: false });
+            });
+        }
+
+        return result;
     };
 
     return [augmentedMutate, ...mutationResult];

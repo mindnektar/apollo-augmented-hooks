@@ -118,6 +118,19 @@ mutate({
 });
 ```
 
+#### - lazyRefetch
+
+If your cache update logic would be too complicated to maintain, it can be more pragmatic to simply invalidate the cache and refetch data from the server. Unfortunately, this can easily result in a barrage of requests, depending on how many queries are affected. To prevent this, you can use the `lazyRefetch` option, which allows you to specify which fields on the `ROOT_QUERY` should be invalidated. This will cause all queries that are currently active and that include the specified fields to immediately refetch, and it will cause all inactive queries that include the fields to only refetch when they become active again. This serves to keep the number of requests to a minimum while still ensuring that your UI is up-to-date.
+
+Example:
+
+```js
+mutate({
+    input: someInput,
+    lazyRefetch: ['notifications']
+});
+```
+
 #### - modifiers
 
 `modifiers` serves as a helper to make cache updates after a mutation as pain-free as possible. It accepts an array of modifiers, and each modifier is either an object supporting the following options or a function returning such an object. See [this guide on caching](CACHING.md) for a more detailed explanation and plenty of examples.
