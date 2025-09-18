@@ -1,6 +1,7 @@
 import { gql, useMutation, useApolloClient } from '@apollo/client';
 import { handleOptimisticResponse } from './helpers/optimisticResponse';
 import { handleModifiers } from './helpers/modifiers';
+import { clearReducedQueryCache } from './helpers/reducedQueries';
 import { waitForRequestsInFlight, areRequestsInFlight } from './helpers/inFlightTracking';
 import { useGlobalContext } from './globalContextHook';
 
@@ -17,7 +18,7 @@ export default (mutation, hookOptions = {}) => {
         // most of the time ($input or $id), reducing overhead.
         const variables = args.length === 1 ? { [args[0].name.value]: input } : input;
 
-        const result = await mutate({
+        const response = await mutate({
             variables,
             ...options,
             context: {
@@ -50,24 +51,38 @@ export default (mutation, hookOptions = {}) => {
         });
 
         if (options.lazyRefetch) {
+            clearReducedQueryCache();
+
             // Make sure that only queries that are currently active are refetched immediately.
-            await client.refetchQueries({
-                include: 'active',
-                onQueryUpdated: (query, { result }) => (
-                    query.observers.size > 0
-                    && query.options.fetchPolicy !== 'cache-only'
-                    && !query.queryName.startsWith('__REDUCED__')
-                    && options.lazyRefetch.some((fieldName) => result[fieldName])
-                ),
-            });
+            client
+                .getObservableQueries()
+                .forEach((query) => {
+                    const result = query.getCurrentResult().data;
+
+                    if (
+                        options.lazyRefetch.some((fieldName) => result[fieldName])
+                        && query.observers.size > 0
+                        && query.options.fetchPolicy !== 'cache-only'
+                    ) {
+                        if (query.queryName.startsWith('__REDUCED__')) {
+                            query.tearDownQuery();
+                        } else {
+                            query.refetch();
+                        }
+                    }
+                });
 
             // Queries that are not currently active should be refetched only once they become active again.
-            options.lazyRefetch.forEach((fieldName) => {
-                client.cache.evict({ fieldName, broadcast: false });
+            client.cache.modify({
+                fields: options.lazyRefetch.reduce((result, fieldName) => ({
+                    ...result,
+                    [fieldName]: ({ INVALIDATE }) => INVALIDATE,
+                }), {}),
+                broadcast: false,
             });
         }
 
-        return result;
+        return response;
     };
 
     return [augmentedMutate, ...mutationResult];
