@@ -60,7 +60,8 @@ export default (mutation, hookOptions = {}) => {
                     const result = query.getCurrentResult().data;
 
                     if (
-                        options.lazyRefetch.some((fieldName) => result[fieldName])
+                        result
+                        && options.lazyRefetch.some((fieldName) => result[fieldName])
                         && query.observers.size > 0
                         && query.options.fetchPolicy !== 'cache-only'
                     ) {
