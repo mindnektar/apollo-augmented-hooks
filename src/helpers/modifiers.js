@@ -44,7 +44,7 @@ const handleIncludeIf = (cache, item, previous, details) => (
             const shouldInclude = typeof condition === 'function' ? condition(subject) : condition;
 
             if (shouldInclude) {
-                next.push(details.toReference(subject));
+                next.push(details.toReference(subject, true));
             }
         });
 
@@ -75,7 +75,7 @@ const handleSetIf = (cache, item, itemRef, previous, details) => (
 const augmentFields = (cache, cacheObject, item, fields) => {
     const modify = (callback, previous, details) => {
         // Attach a couple additional helpers to apollo's standard details object.
-        const itemRef = details.toReference(item);
+        const itemRef = details.toReference(item, true);
 
         return callback({
             ...details,
