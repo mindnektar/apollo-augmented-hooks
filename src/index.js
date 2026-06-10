@@ -5,6 +5,7 @@ import useMutation from './useMutation';
 import useSubscription from './useSubscription';
 import combineResults from './combineResults';
 import { setGlobalContextHook } from './globalContextHook';
+import { setDataMapSourcesHook } from './dataMapSourcesHook';
 import { clearReducedQueryCache } from './helpers/reducedQueries';
 
 export {
@@ -15,5 +16,6 @@ export {
     useSubscription,
     combineResults,
     setGlobalContextHook,
+    setDataMapSourcesHook,
     clearReducedQueryCache,
 };

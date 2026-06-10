@@ -1,9 +1,11 @@
 import { useQuery } from '@apollo/client';
 import mapData from '../helpers/mapData';
 import { useGlobalContext } from '../globalContextHook';
+import { useDataMapSources } from '../dataMapSourcesHook';
 
 export default (queryAst, options) => {
     const globalContext = useGlobalContext();
+    const dataMapSources = useDataMapSources();
 
     // Grab all the requested data from the cache. If some or all of the data is missing, the reduced query will get it.
     const cacheResult = useQuery(queryAst, {
@@ -16,5 +18,5 @@ export default (queryAst, options) => {
         },
     });
 
-    return mapData(cacheResult.data, options.dataMap);
+    return mapData(cacheResult.data, options.dataMap, dataMapSources);
 };

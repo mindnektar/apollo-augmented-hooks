@@ -325,6 +325,10 @@ export default () => {
 
 See [this guide on the global context hook](GLOBAL_CONTEXT_HOOK.md).
 
+### setDataMapSourcesHook
+
+Registers data sources that act as additional mapping targets in any `dataMap`. See [this guide on data mapping](DATA_MAPPING.md) for more information.
+
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
