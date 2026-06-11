@@ -115,7 +115,7 @@ useQuery(query, {
 });
 ```
 
-This works just like the `target` attribute, except that the objects to map to are taken from the provided data rather than from the query result. Make sure the provided data comes from a reactive source (such as a hook reading from a context or another query), so your components re-render with fresh data whenever it changes.
+This works just like the `target` attribute, except that the objects to map to are taken from the provided data rather than from the query result. Make sure the provided data comes from a reactive source (such as a hook reading from a context or another query), so your components re-render with fresh data whenever it changes. The provided data is compared by identity to determine whether the mapping needs to be recomputed, so if you derive it during render (e.g. `[...groups, ...flexGroups]`), memoize it — otherwise the mapped data is rebuilt on every render.
 
 If you omit the `fieldName` attribute, it defaults to the last part of the mapped path (`todos` in the example above).
 

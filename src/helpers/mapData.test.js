@@ -695,6 +695,86 @@ it('does not map if the directly provided data does not contain the origin data'
     expect(mapData(cacheData, dataMap)).toEqual(cacheData);
 });
 
+it('returns referentially stable results for unchanged inputs', () => {
+    const cacheData = {
+        users: [{
+            __typename: 'User',
+            id: 'some-user-id',
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-todo-id',
+            }],
+        }],
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            title: 'Do the dishes',
+        }],
+    };
+    const dataMap = {
+        'users.todos': 'todos',
+    };
+
+    expect(mapData(cacheData, dataMap)).toBe(mapData(cacheData, dataMap));
+});
+
+it('preserves the identity of unchanged branches when unrelated data changes', () => {
+    const users = [{
+        __typename: 'User',
+        id: 'some-user-id',
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+        }],
+    }];
+    const todos = [{
+        __typename: 'Todo',
+        id: 'some-todo-id',
+        title: 'Do the dishes',
+    }];
+    const dataMap = {
+        'users.todos': 'todos',
+    };
+    const first = mapData({ users, todos, unrelated: 'some-value' }, dataMap);
+    const second = mapData({ users, todos, unrelated: 'some-other-value' }, dataMap);
+
+    expect(second).not.toBe(first);
+    expect(second.users).toBe(first.users);
+});
+
+it('preserves the identity of merged entities when unrelated data changes', () => {
+    const users = [{
+        __typename: 'User',
+        id: 'some-user-id',
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+        }],
+    }];
+    const todos = [{
+        __typename: 'Todo',
+        id: 'some-todo-id',
+        priority: 'high',
+    }];
+    const sources = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            title: 'Do the dishes',
+        }],
+    };
+    const dataMap = {
+        'users.todos': 'todos',
+    };
+    const first = mapData({ users, todos, unrelated: 'some-value' }, dataMap, sources);
+    const second = mapData({ users, todos, unrelated: 'some-other-value' }, dataMap, sources);
+
+    expect(second.users).toBe(first.users);
+    expect(second.users[0].todos[0]).toBe(first.users[0].todos[0]);
+    expect(second.users[0].todos[0].title).toBe('Do the dishes');
+    expect(second.users[0].todos[0].priority).toBe('high');
+});
+
 it('handles empty data gracefully', () => {
     expect(mapData()).toBe(undefined);
 });

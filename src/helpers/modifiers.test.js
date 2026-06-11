@@ -71,6 +71,76 @@ it('includes the item if the parameter is true and the item is not already prese
     expect(received).toEqual(expected);
 });
 
+it('does not corrupt already cached items containing aliased fields', () => {
+    const query = gql`
+        query {
+            things {
+                id
+                image {
+                    id
+                    small: variation(size: SMALL) {
+                        url
+                    }
+                }
+            }
+        }
+    `;
+
+    cache.writeQuery({
+        query,
+        data: {
+            things: [],
+        },
+    });
+
+    const item = {
+        __typename: 'Thing',
+        id: 'some-id',
+        image: {
+            __typename: 'Image',
+            id: 'some-image-id',
+            small: {
+                __typename: 'ImageVariation',
+                url: 'some-url',
+            },
+        },
+    };
+
+    // The item has already been written through a selection set, just like apollo does with
+    // mutation results before the modifiers run.
+    cache.writeQuery({
+        query: gql`
+            query {
+                thing {
+                    id
+                    image {
+                        id
+                        small: variation(size: SMALL) {
+                            url
+                        }
+                    }
+                }
+            }
+        `,
+        data: { thing: item },
+    });
+
+    const modifiers = [{
+        fields: {
+            things: ({ includeIf }) => includeIf(true),
+        },
+    }];
+
+    handleModifiers(cache, item, modifiers);
+
+    const received = cache.readQuery({ query });
+    const expected = {
+        things: [item],
+    };
+
+    expect(received).toEqual(expected);
+});
+
 it('does not include the item if the parameter is true and the item is already present', () => {
     const query = gql`
         query {

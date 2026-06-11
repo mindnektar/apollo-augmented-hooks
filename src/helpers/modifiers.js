@@ -3,6 +3,19 @@ import { clearReducedQueryCache } from './reducedQueries';
 import { keyFieldsForTypeName } from './keyFields';
 import { extractVariablesFromFieldName } from './fieldNames';
 
+// `toReference(object, true)` merges the raw object into the cache as-is, without normalizing
+// nested entities or canonicalizing aliased or parameterized fields (e.g. an aliased
+// `thumbnail: variation(type: THUMBNAIL)` would be stored under `thumbnail`, where no query can
+// find it). Mutation results have already been written to the cache correctly through the
+// mutation's selection set by the time the modifiers run, so an object that is already in the
+// cache only needs a reference, and merging the raw object would corrupt the normalized data.
+// Only objects that are not in the cache yet are merged.
+const toSafeReference = (cache, toReference, object) => {
+    const reference = toReference(object);
+
+    return reference && cache.data.has(reference.__ref) ? reference : toReference(object, true);
+};
+
 const areCacheObjectsEqual = (refA, refB, keyFields, readField) => (
     keyFields.every((keyField, index) => {
         if (Array.isArray(keyField)) {
@@ -44,7 +57,7 @@ const handleIncludeIf = (cache, item, previous, details) => (
             const shouldInclude = typeof condition === 'function' ? condition(subject) : condition;
 
             if (shouldInclude) {
-                next.push(details.toReference(subject, true));
+                next.push(toSafeReference(cache, details.toReference, subject));
             }
         });
 
@@ -75,7 +88,7 @@ const handleSetIf = (cache, item, itemRef, previous, details) => (
 const augmentFields = (cache, cacheObject, item, fields) => {
     const modify = (callback, previous, details) => {
         // Attach a couple additional helpers to apollo's standard details object.
-        const itemRef = details.toReference(item, true);
+        const itemRef = toSafeReference(cache, details.toReference, item);
 
         return callback({
             ...details,
