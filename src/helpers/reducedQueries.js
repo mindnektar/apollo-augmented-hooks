@@ -176,7 +176,7 @@ const hasArgumentVariable = (args, variable) => (
     })
 );
 
-const hasVariable = (selectionSet, variable) => (
+export const hasVariable = (selectionSet, variable) => (
     (selectionSet?.selections || []).some((selection) => {
         if (selection.kind !== 'Field') {
             return true;

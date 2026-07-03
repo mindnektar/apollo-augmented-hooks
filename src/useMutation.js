@@ -2,6 +2,7 @@ import { gql, useMutation, useApolloClient } from '@apollo/client';
 import { handleOptimisticResponse } from './helpers/optimisticResponse';
 import { handleModifiers } from './helpers/modifiers';
 import { clearReducedQueryCache } from './helpers/reducedQueries';
+import { handleLazyRefetch } from './helpers/lazyRefetch';
 import { waitForRequestsInFlight, areRequestsInFlight } from './helpers/inFlightTracking';
 import { useGlobalContext } from './globalContextHook';
 
@@ -51,36 +52,11 @@ export default (mutation, hookOptions = {}) => {
         });
 
         if (options.lazyRefetch) {
+            // The evictions performed by the refetch handler change which data is missing from
+            // the cache, so any memoized query reductions are no longer valid.
             clearReducedQueryCache();
 
-            // Make sure that only queries that are currently active are refetched immediately.
-            client
-                .getObservableQueries()
-                .forEach((query) => {
-                    const result = query.getCurrentResult().data;
-
-                    if (
-                        result
-                        && options.lazyRefetch.some((fieldName) => result[fieldName])
-                        && query.observers.size > 0
-                        && query.options.fetchPolicy !== 'cache-only'
-                    ) {
-                        if (query.queryName.startsWith('__REDUCED__')) {
-                            query.tearDownQuery();
-                        } else {
-                            query.refetch();
-                        }
-                    }
-                });
-
-            // Queries that are not currently active should be refetched only once they become active again.
-            client.cache.modify({
-                fields: options.lazyRefetch.reduce((result, fieldName) => ({
-                    ...result,
-                    [fieldName]: ({ INVALIDATE }) => INVALIDATE,
-                }), {}),
-                broadcast: false,
-            });
+            handleLazyRefetch(client, options.lazyRefetch);
         }
 
         return response;
