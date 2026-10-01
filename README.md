@@ -308,6 +308,10 @@ Works exactly the same as its [useMutation counterpart](#-modifiers).
 
 Works exactly the same as its [useMutation counterpart](#-modifiers).
 
+#### - lazyRefetch
+
+Works exactly the same as its [useMutation counterpart](#-lazyrefetch), triggered by every notification. This is useful whenever a notification can't be merged into the cache reliably, e.g. because deciding which filtered lists an item belongs to would require the server's filter logic.
+
 ### combineResults
 
 If you have more than one instance of `useQuery` in your hook (e.g. one regular query and one query for polling), you can easily merge their results like this:
