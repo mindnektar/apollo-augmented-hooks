@@ -87,3 +87,45 @@ it('still calls the onData option', () => {
 
     expect(onData).toHaveBeenCalledTimes(1);
 });
+
+it('delivers the changes of the modifiers to all active queries at once, before any timers run', async () => {
+    responses = {
+        kids: { kids: [{ __typename: 'Kid', id: 'k1' }, { __typename: 'Kid', id: 'k2' }] },
+        groups: { groups: [{ __typename: 'Group', id: 'g1', kids: [{ __typename: 'Kid', id: 'k1' }] }] },
+    };
+
+    const kidsQuery = activateQuery('query kids { kids { id } }');
+    const groupsQuery = activateQuery('query groups { groups { id kids { id } } }');
+
+    await settle();
+
+    const order = [];
+
+    subscriptions.push(kidsQuery.subscribe(({ data }) => order.push(`kids: ${data.kids.map(({ id }) => id)}`)));
+    subscriptions.push(groupsQuery.subscribe(({ data }) => order.push(`group: ${data.groups[0].kids.map(({ id }) => id)}`)));
+
+    await settle();
+    order.length = 0;
+    setTimeout(() => order.push('timer'));
+
+    notify(
+        'subscription kidsDeactivated { kidsDeactivated { id } }',
+        {
+            modifiers: [{
+                fields: {
+                    kids: ({ includeIf }) => includeIf(false),
+                },
+            }, {
+                typename: 'Group',
+                fields: {
+                    kids: ({ includeIf }) => includeIf(false),
+                },
+            }],
+        },
+        { kidsDeactivated: [{ __typename: 'Kid', id: 'k1' }] },
+    );
+
+    await settle();
+
+    expect(order).toEqual(['kids: k2', 'group: ', 'timer']);
+});

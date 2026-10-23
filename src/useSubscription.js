@@ -13,6 +13,13 @@ export default (subscription, options = {}) => {
             // Simplify cache updates after subscription notifications.
             handleModifiers(result.client.cache, result.data.data[subscriptionName], options.modifiers);
 
+            if (options.modifiers) {
+                // Unlike after a mutation, apollo has already broadcast the notification by now, and would deliver the
+                // modifiers' changes to each query on its own timer. Components could then render some of them without
+                // the others, e.g. an item still referring to an entry that another query has already dropped.
+                result.client.queryManager.broadcastQueries();
+            }
+
             if (options.lazyRefetch) {
                 // The evictions performed by the refetch handler change which data is missing from
                 // the cache, so any memoized query reductions are no longer valid.
