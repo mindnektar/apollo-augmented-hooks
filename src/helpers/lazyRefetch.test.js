@@ -89,6 +89,47 @@ it('requests each store field only once across multiple active queries', async (
     expect(requests[0].name).toBe('__REFETCH__pageA');
 });
 
+it('refetches a field for each active query selecting different contents of it', async () => {
+    responses = {
+        kidProfile: { kid: { __typename: 'Kid', id: 'k1', name: 'Nelli' } },
+        kidActivities: { kid: { __typename: 'Kid', id: 'k1', activities: [] } },
+        __REFETCH__kidProfile: { kid: { __typename: 'Kid', id: 'k1', name: 'Nelli' } },
+        __REFETCH__kidActivities: { kid: { __typename: 'Kid', id: 'k1', activities: [{ __typename: 'Activity', id: 'a1' }] } },
+    };
+
+    activateQuery('query kidProfile($id: ID!) { kid(id: $id) { id name } }', { id: 'k1' });
+    const activities = activateQuery(
+        'query kidActivities($id: ID!, $filter: Filter) { kid(id: $id) { id activities(filter: $filter) { id } } }',
+        { id: 'k1', filter: { month: '2026-10' } },
+    );
+    await settle();
+    requests = [];
+
+    handleLazyRefetch(client, ['kid']);
+    await settle();
+
+    expect(requests.map(({ name }) => name)).toEqual(['__REFETCH__kidProfile', '__REFETCH__kidActivities']);
+    expect(activities.getCurrentResult().data.kid.activities).toEqual([{ __typename: 'Activity', id: 'a1' }]);
+});
+
+it('leaves refetching a reduced query to its original', async () => {
+    responses = {
+        page: { kid: { __typename: 'Kid', id: 'k1', name: 'Nelli', activities: [] } },
+        __REDUCED__page: { kid: { __typename: 'Kid', id: 'k1', activities: [] } },
+        __REFETCH__page: { kid: { __typename: 'Kid', id: 'k1', name: 'Nelli', activities: [] } },
+    };
+
+    activateQuery('query page($id: ID!) { kid(id: $id) { id name activities { id } } }', { id: 'k1' });
+    activateQuery('query __REDUCED__page($id: ID!) { kid(id: $id) { id activities { id } } }', { id: 'k1' });
+    await settle();
+    requests = [];
+
+    handleLazyRefetch(client, ['kid']);
+    await settle();
+
+    expect(requests.map(({ name }) => name)).toEqual(['__REFETCH__page']);
+});
+
 it('refetches each active variable variant separately', async () => {
     responses = {
         pageA: { observationMonths: [] },

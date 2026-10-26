@@ -1,3 +1,5 @@
+import { print } from 'graphql';
+import stringify from 'json-stable-stringify';
 import { buildFieldNames } from './fieldNames';
 import { hasVariable } from './reducedQueries';
 import { registerRequest, deregisterRequest } from './inFlightTracking';
@@ -5,6 +7,21 @@ import { registerRequest, deregisterRequest } from './inFlightTracking';
 const getFieldName = (storeFieldName) => (
     storeFieldName.match(/^[^({:]+/)[0]
 );
+
+// Identifies what refetching a field requests: the field itself as well as everything selected
+// within it, including the values of any variables used there. Queries selecting different
+// contents of the same field need a refetch each.
+const getSelectionKey = (selection, variables) => {
+    const usedVariables = Object.keys(variables || {})
+        .filter((name) => hasVariable(selection.selectionSet, name))
+        .reduce((result, name) => ({ ...result, [name]: variables[name] }), {});
+
+    return [
+        buildFieldNames(selection, variables)[0],
+        selection.selectionSet ? print(selection.selectionSet) : '',
+        stringify(usedVariables),
+    ].join('|');
+};
 
 const collectFragmentNames = (selectionSet, fragmentNames = new Set()) => {
     (selectionSet?.selections || []).forEach((selection) => {
@@ -65,6 +82,8 @@ const makeFieldRefetchQueryAst = (queryAst, operation, selections) => {
 
 export const handleLazyRefetch = (client, fieldNames) => {
     const coveredStoreFieldNames = new Set();
+    const coveredSelectionKeys = new Set();
+    const handledQueryKeys = new Set();
     const refetches = [];
 
     // Find all the active queries containing any of the requested fields at the top level of
@@ -84,14 +103,30 @@ export const handleLazyRefetch = (client, fieldNames) => {
 
         const { query: queryAst, variables, context } = query.options;
         const operation = queryAst.definitions.find(({ kind }) => kind === 'OperationDefinition');
-        const selections = (operation?.selectionSet.selections || []).filter((selection) => (
-            selection.kind === 'Field'
-            && fieldNames.includes(selection.name.value)
-            // Skip fields whose cache contents are already covered by another query's refetch
-            && !buildFieldNames(selection, variables).every((storeFieldName) => (
-                coveredStoreFieldNames.has(storeFieldName)
-            ))
-        ));
+        const queryName = operation?.name?.value || '';
+        const queryKey = `${queryName.replace(/^__REDUCED__/, '')}|${stringify(variables || {})}`;
+
+        // A reduced query contains only parts of its original, which has been handled already if
+        // it is active.
+        if (queryName.startsWith('__REDUCED__') && handledQueryKeys.has(queryKey)) {
+            return;
+        }
+
+        handledQueryKeys.add(queryKey);
+
+        const selections = (operation?.selectionSet.selections || []).filter((selection) => {
+            if (selection.kind !== 'Field' || !fieldNames.includes(selection.name.value)) {
+                return false;
+            }
+
+            // Skip fields whose contents are already covered by another query's refetch
+            const selectionKey = getSelectionKey(selection, variables);
+            const isCovered = coveredSelectionKeys.has(selectionKey);
+
+            coveredSelectionKeys.add(selectionKey);
+
+            return !isCovered;
+        });
 
         if (selections.length === 0) {
             return;
