@@ -42,6 +42,14 @@ const getRefs = (data) => {
     return refsCache.get(data);
 };
 
+// What needs no merging is kept as is rather than walked into or cloned: objects that both sides hold, like the very
+// entities of a source that an earlier entry of the data map put into the query result, and whatever only one side
+// has. Either can lead into a large graph of linked entities, and copying it for every merged entity makes mapping
+// grow quadratically with the data.
+const mergeValues = (target, source, options) => (
+    target === source ? target : merge(target, source, options)
+);
+
 // Entity arrays are matched by id, keeping the membership and order of the result-side array so
 // deliberately filtered lists stay filtered. Items without a matching id (including arrays of
 // non-entity values) resolve to the result side wholesale.
@@ -52,12 +60,16 @@ const mergeArrays = (target, source, options) => {
 
     return source.map((item) => (
         options.isMergeableObject(item) && targetRefs[item?.id]
-            ? merge(targetRefs[item.id], item, options)
+            ? mergeValues(targetRefs[item.id], item, options)
             : item
     ));
 };
 
 const mergeEntities = (sourceEntity, resultEntity) => {
+    if (sourceEntity === resultEntity) {
+        return sourceEntity;
+    }
+
     if (!mergedEntityCache.has(sourceEntity)) {
         mergedEntityCache.set(sourceEntity, new WeakMap());
     }
@@ -65,7 +77,11 @@ const mergeEntities = (sourceEntity, resultEntity) => {
     const cache = mergedEntityCache.get(sourceEntity);
 
     if (!cache.has(resultEntity)) {
-        cache.set(resultEntity, merge(sourceEntity, resultEntity, { arrayMerge: mergeArrays }));
+        cache.set(resultEntity, merge(sourceEntity, resultEntity, {
+            arrayMerge: mergeArrays,
+            customMerge: () => mergeValues,
+            clone: false,
+        }));
     }
 
     return cache.get(resultEntity);

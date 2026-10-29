@@ -775,6 +775,85 @@ it('preserves the identity of merged entities when unrelated data changes', () =
     expect(second.users[0].todos[0].priority).toBe('high');
 });
 
+it('does not walk into entities that both the query result and a registered source hold', () => {
+    const user = {
+        __typename: 'User',
+        id: 'some-user-id',
+        todos: [],
+    };
+    const todo = {
+        __typename: 'Todo',
+        id: 'some-todo-id',
+        users: [user],
+    };
+
+    // Linked both ways, as mapping commonly leaves entities, so walking into them would never end
+    user.todos.push(todo);
+
+    const cacheData = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            assignee: user,
+        }],
+        notifications: [{
+            __typename: 'Notification',
+            id: 'some-notification-id',
+            todo: {
+                __typename: 'Todo',
+                id: 'some-todo-id',
+            },
+        }],
+    };
+    const sources = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            assignee: user,
+        }],
+    };
+    const dataMap = {
+        'notifications.todo': 'todos',
+    };
+
+    expect(mapData(cacheData, dataMap, sources).notifications[0].todo.assignee).toBe(user);
+});
+
+it('keeps what only a registered source holds of an entity as is', () => {
+    const image = {
+        __typename: 'Image',
+        id: 'some-image-id',
+        url: 'some-url',
+    };
+    const cacheData = {
+        users: [{
+            __typename: 'User',
+            id: 'some-user-id',
+            todos: [{
+                __typename: 'Todo',
+                id: 'some-todo-id',
+            }],
+        }],
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            priority: 'high',
+        }],
+    };
+    const sources = {
+        todos: [{
+            __typename: 'Todo',
+            id: 'some-todo-id',
+            image,
+        }],
+    };
+    const dataMap = {
+        'users.todos': 'todos',
+    };
+
+    expect(mapData(cacheData, dataMap, sources).users[0].todos[0].image).toBe(image);
+});
+
 it('handles empty data gracefully', () => {
     expect(mapData()).toBe(undefined);
 });
